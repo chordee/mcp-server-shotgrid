@@ -1,0 +1,12 @@
+[project]
+name = "mcp-server-shotgrid"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "asyncio>=3.4.3",
+    "httpx>=0.28.1",
+    "httpx-auth>=0.23.1",
+    "mcp>=1.6.0",
+]
