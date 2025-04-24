@@ -4,10 +4,7 @@ import asyncio
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
 
-from shotgrid_rest import (
-    ShotGridRest,
-    EXCLUDE_KEYS
-)
+from shotgrid_rest import ShotGridRest, EXCLUDE_KEYS
 
 SG = ShotGridRest()
 
@@ -71,7 +68,7 @@ async def get_all_projects_name_contains(name: str):
                 - code: The project code.
                 - updated_at: The timestamp of the last update to the project.
     """
-    filters = {"filters": [["name", "contains", name]]}
+    filters = [["name", "contains", name]]
     fields = ["name", "code", "updated_at"]
     resp = await SG.post_request(
         "/entity/projects/_search", json={"filters": filters, "fields": fields}
@@ -170,7 +167,7 @@ async def get_all_assets_code_contains(code: str):
                 - updated_at: The timestamp of the last update to the asset.
                 - project: The project to which the asset belongs.
     """
-    filters = {"filters": [["code", "contains", code]]}
+    filters = [["code", "contains", code]]
     fields = ["name", "code", "updated_at", "project"]
     resp = await SG.post_request(
         "/entity/assets/_search", json={"filters": filters, "fields": fields}
@@ -191,9 +188,7 @@ async def get_all_tasks_assigned_to_user(user_id: int):
         List[dict]: A list of dictionaries, each containing details for a task,
             including at least the task's name (content), status, ID, last update time, and project.
     """
-    filters = {
-        "filters": [["task_assignees", "is", {"type": "HumanUser", "id": user_id}]]
-    }
+    filters = [["task_assignees", "is", {"type": "HumanUser", "id": user_id}]]
     fields = ["content", "sg_status_list", "id", "updated_at", "project"]
     resp = await SG.post_request(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
@@ -215,12 +210,11 @@ async def get_all_tasks_assigned_to_user_in_project_name(
         List[dict]: A list of dictionaries, each containing details for a task,
             including at least the task's name (content), status, ID, last update time, and project.
     """
-    filters = {
-        "filters": [
+    filters = [
             ["task_assignees", "is", {"type": "HumanUser", "id": user_id}],
             ["project.Project.name", "is", project_name],
         ]
-    }
+
     fields = ["content", "sg_status_list", "id", "updated_at", "project", "updated_at"]
     resp = await SG.post_request(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
@@ -240,7 +234,7 @@ async def get_all_tasks_with_shot(shot_id: int):
             including at least the task's name (content), status, ID, last update time, project,
             task assignees, cached display name, and step.
     """
-    filters = {"filters": [["entity", "is", {"type": "Shot", "id": shot_id}]]}
+    filters = [["entity", "is", {"type": "Shot", "id": shot_id}]]
     fields = [
         "content",
         "sg_status_list",
@@ -269,7 +263,7 @@ async def get_all_tasks_with_asset(asset_id: int):
             including at least the task's name (content), status, ID, last update time, project,
             task assignees, cached display name, and step.
     """
-    filters = {"filters": [["entity", "is", {"type": "Asset", "id": asset_id}]]}
+    filters = [["entity", "is", {"type": "Asset", "id": asset_id}]]
     fields = [
         "content",
         "sg_status_list",
@@ -643,8 +637,6 @@ async def get_all_versions_with_task(task_id: int):
             auth=SG.auth,
         )
         data = response.json().get("data", [])
-        if data:
-            data = data[0].get("relationships", {}).get("versions", {}).get("data", [])
         return data
 
 
@@ -652,7 +644,7 @@ def remove_exclude_fields(data: Dict) -> Dict:
     for exclude_key in EXCLUDE_KEYS:
         if exclude_key in data["attributes"].keys():
             del data["attributes"][exclude_key]
-    for field in data["attributes"].keys():
+    for field in list(data["attributes"].keys()):
         if field.startswith("step_"):
             del data["attributes"][field]
     return data
