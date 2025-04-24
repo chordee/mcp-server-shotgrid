@@ -114,6 +114,7 @@ EXCLUDE_KEYS = (
     "sg_uploaded_movie",
     "sg_uploaded_movie_webm",
     "sg_uploaded_movie_transcoding_status",
+    "bookings",
 )
 
 ALL_ENTITY_TYPES = Literal[
@@ -127,7 +128,7 @@ ALL_ENTITY_TYPES = Literal[
     "notes",
     "steps",
     "replies",
-    "attachments"
+    "attachments",
 ]
 
 EXPLAIN_FIELDS = {
