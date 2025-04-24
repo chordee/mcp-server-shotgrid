@@ -4,12 +4,25 @@ import asyncio
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
 
-from shotgrid_rest import ShotGridRest, EXCLUDE_KEYS
+from shotgrid_rest import ShotGridRest, EXCLUDE_KEYS, ALL_ENTITY_TYPES
 
 SG = ShotGridRest()
 
 # Initialize FastMCP server
 mcp = FastMCP("mcp-server-shotgrid-rest")
+
+GENERAL_FIELDS = fields = [
+    "name",
+    "updated_at",
+    "sg_status_list",
+    "project",
+    "code",
+    "user",
+    "id",
+    "tasks",
+    "content",
+    "cached_display_name",
+]
 
 
 @mcp.tool()
@@ -309,88 +322,6 @@ async def get_project_by_name(name: str):
 
 
 @mcp.tool()
-async def get_project_by_id(project_id: int):
-    """Get detailed information about a project by its ID on ShotGrid.
-
-    Args:
-        project_id: The ID of the project to retrieve.
-
-    Returns:
-        A dictionary containing the project's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/projects/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/projects?filter[id]={project_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-@mcp.tool()
-async def get_shot_by_id(shot_id: int):
-    """Get detailed information about a shot by its ID on ShotGrid.
-
-    Args:
-        shot_id: The ID of the shot to retrieve.
-
-    Returns:
-        A dictionary containing the shot's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/shots/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/shots?filter[id]={shot_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-@mcp.tool()
-async def get_sequence_by_id(sequence_id: int):
-    """Get detailed information about a sequence by its ID on ShotGrid.
-
-    Args:
-        sequence_id: The ID of the sequence to retrieve.
-
-    Returns:
-        A dictionary containing the sequence's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/sequences/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/sequences?filter[id]={sequence_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-
-        return data
-
-
-@mcp.tool()
 async def get_asset_by_id(asset_id: int):
     """Get detailed information about an asset by its ID on ShotGrid.
 
@@ -415,33 +346,6 @@ async def get_asset_by_id(asset_id: int):
         )
         response = await client.get(
             f"{SG.api_host}/entity/assets?filter[id]={asset_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-@mcp.tool()
-async def get_task_by_id(task_id: int):
-    """Get detailed information about a task by its ID on ShotGrid.
-
-    Args:
-        task_id: The ID of the task to retrieve.
-
-    Returns:
-        A dictionary containing the task's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/tasks/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/tasks?filter[id]={task_id}&fields={fields}",
             auth=SG.auth,
         )
         data = response.json().get("data", [])
@@ -496,29 +400,6 @@ async def get_user_by_login(login: str):
 
 
 @mcp.tool()
-async def get_note_by_id(note_id: int):
-    """Get detailed information about a note by its ID on ShotGrid.
-    Args:
-        note_id: The ID of the note to retrieve.
-    Returns:
-        A dictionary containing the note's details, including content, author, and other relevant fields.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/notes/fields", auth=SG.auth
-        )
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/notes?filter[id]={note_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-@mcp.tool()
 async def get_all_notes_with_version(version_id: int):
     """
     Retrieve all notes associated with a specific version in ShotGrid.
@@ -543,29 +424,6 @@ async def get_all_notes_with_version(version_id: int):
 
 
 @mcp.tool()
-async def get_reply_by_id(reply_id: int):
-    """Get detailed information about a reply by its ID on ShotGrid.
-    Args:
-        reply_id: The ID of the reply to retrieve.
-    Returns:
-        A dictionary containing the reply's details, including content, author, and other relevant fields.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/replies/fields", auth=SG.auth
-        )
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/replies?filter[id]={reply_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-@mcp.tool()
 async def get_all_replies_with_note_id(note_id: int):
     """Get all replies associated with a specific note ID on ShotGrid.
     Args:
@@ -581,33 +439,6 @@ async def get_all_replies_with_note_id(note_id: int):
         data = response.json().get("data", [])
         if data:
             data = data[0].get("relationships", {}).get("replies", {}).get("data", [])
-        return data
-
-
-@mcp.tool()
-async def get_version_by_id(version_id: int):
-    """Get detailed information about a version by its ID on ShotGrid.
-
-    Args:
-        version_id: The ID of the version to retrieve.
-
-    Returns:
-        A dictionary containing the version's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/versions/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/versions?filter[id]={version_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
         return data
 
 
@@ -652,17 +483,11 @@ async def get_entities_updated_in_last_n_days(
         n (int): The number of days to look back for recently updated entities.
 
     Returns:
-        List[Dict[str, Any]]: A list of dictionaries, each representing an entity updated in the last n days.
-            Each dictionary typically includes fields such as:
-                - name: The name of the entity.
-                - updated_at: The timestamp of the last update.
-                - sg_status_list: The status of the entity, if available.
-                - project: The project to which the entity belongs, if applicable.
-                - code: The code or identifier of the entity.
-                - id: The unique identifier of the entity.
+        List[Dict[str, Any]]:  A dictionary containing the entity's details, including fields such as name, status, type, id
+            and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
     """
     filters = [["updated_at", "in_last", [n, "DAY"]]]
-    fields = ["name", "updated_at", "sg_status_list", "project", "code", "id"]
+    fields = GENERAL_FIELDS
     resp = await SG.post_request(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
     )
@@ -683,26 +508,48 @@ async def get_entities_updated_in_last_n_days_with_project(
         n (int): The number of days to look back for recently updated entities.
 
     Returns:
-        List[Dict[str, Any]]: A list of dictionaries, each representing an entity updated in the last n days within the specified project.
-            Each dictionary typically includes fields such as:
-                - name: The name of the entity.
-                - updated_at: The timestamp of the last update.
-                - sg_status_list: The status of the entity, if available.
-                - project: The project to which the entity belongs.
-                - code: The code or identifier of the entity.
-                - user: The user associated with the entity, if available.
-                - id: The unique identifier of the entity.
+        List[Dict[str, Any]]: A dictionary containing the entity's details, including fields such as name, status, type, id
+            and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
     """
     filters = [
         ["updated_at", "in_last", [n, "DAY"]],
         ["project", "is", {"type": "Project", "id": project_id}],
     ]
-    fields = ["name", "updated_at", "sg_status_list", "project", "code", "user", "id"]
+    fields = GENERAL_FIELDS
     resp = await SG.post_request(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
     return data
+
+
+@mcp.tool()
+async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int):
+    """
+    Get detailed information about an entity by its ID on ShotGrid.
+
+    Args:
+        entity_type (str): The type of entity to retrieve (e.g., "versions", "shots", "assets").
+        entity_id (int): The ID of the entity to retrieve.
+
+    Returns:
+        dict: A dictionary containing the entity's details, including fields such as name, status, type, id
+            and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
+    """
+    async with httpx.AsyncClient() as client:
+        fileds_response = await client.get(
+            f"{SG.api_host}/schema/{entity_type}/fields", auth=SG.auth
+        )
+
+        fields = ",".join(fileds_response.json()["data"].keys())
+        response = await client.get(
+            f"{SG.api_host}/entity/{entity_type}?filter[id]={entity_id}&fields={fields}",
+            auth=SG.auth,
+        )
+        data = response.json().get("data", [])
+        if data:
+            data = [remove_exclude_fields(d) for d in data]
+        return data
 
 
 def remove_exclude_fields(data: Dict) -> Dict:

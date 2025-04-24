@@ -114,7 +114,6 @@ EXCLUDE_KEYS = (
     "sg_uploaded_movie",
     "sg_uploaded_movie_webm",
     "sg_uploaded_movie_transcoding_status",
-    "image",
 )
 
 ALL_ENTITY_TYPES = Literal[
@@ -127,6 +126,8 @@ ALL_ENTITY_TYPES = Literal[
     "HumanUsers",
     "notes",
     "steps",
+    "replies",
+    "attachments"
 ]
 
 EXPLAIN_FIELDS = {
