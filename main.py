@@ -211,9 +211,9 @@ async def get_all_tasks_assigned_to_user_in_project_name(
             including at least the task's name (content), status, ID, last update time, and project.
     """
     filters = [
-            ["task_assignees", "is", {"type": "HumanUser", "id": user_id}],
-            ["project.Project.name", "is", project_name],
-        ]
+        ["task_assignees", "is", {"type": "HumanUser", "id": user_id}],
+        ["project.Project.name", "is", project_name],
+    ]
 
     fields = ["content", "sg_status_list", "id", "updated_at", "project", "updated_at"]
     resp = await SG.post_request(
@@ -640,6 +640,71 @@ async def get_all_versions_with_task(task_id: int):
         return data
 
 
+@mcp.tool()
+async def get_entities_updated_in_last_n_days(
+    entity_type: str, n: int
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve entities of a specified type that have been updated within the last n days.
+
+    Args:
+        entity_type (str): The type of entity to retrieve (e.g., "projects", "shots", "assets").
+        n (int): The number of days to look back for recently updated entities.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, each representing an entity updated in the last n days.
+            Each dictionary typically includes fields such as:
+                - name: The name of the entity.
+                - updated_at: The timestamp of the last update.
+                - sg_status_list: The status of the entity, if available.
+                - project: The project to which the entity belongs, if applicable.
+                - code: The code or identifier of the entity.
+                - id: The unique identifier of the entity.
+    """
+    filters = [["updated_at", "in_last", [n, "DAY"]]]
+    fields = ["name", "updated_at", "sg_status_list", "project", "code", "id"]
+    resp = await SG.post_request(
+        f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    return data
+
+
+@mcp.tool()
+async def get_entities_updated_in_last_n_days_with_project(
+    entity_type: str, project_id: int, n: int
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve entities of a specified type that have been updated within the last n days and belong to a specific project.
+
+    Args:
+        entity_type (str): The type of entity to retrieve (e.g., "projects", "shots", "assets").
+        project_id (int): The unique ID of the project to filter entities by.
+        n (int): The number of days to look back for recently updated entities.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, each representing an entity updated in the last n days within the specified project.
+            Each dictionary typically includes fields such as:
+                - name: The name of the entity.
+                - updated_at: The timestamp of the last update.
+                - sg_status_list: The status of the entity, if available.
+                - project: The project to which the entity belongs.
+                - code: The code or identifier of the entity.
+                - user: The user associated with the entity, if available.
+                - id: The unique identifier of the entity.
+    """
+    filters = [
+        ["updated_at", "in_last", [n, "DAY"]],
+        ["project", "is", {"type": "Project", "id": project_id}],
+    ]
+    fields = ["name", "updated_at", "sg_status_list", "project", "code", "user", "id"]
+    resp = await SG.post_request(
+        f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    return data
+
+
 def remove_exclude_fields(data: Dict) -> Dict:
     for exclude_key in EXCLUDE_KEYS:
         if exclude_key in data["attributes"].keys():
@@ -659,4 +724,3 @@ if __name__ == "__main__":
     SG.set_host(args.host)
     SG.access_token(client_id=args.client_id, client_secret=args.client_secret)
     mcp.run(transport="stdio")
-
