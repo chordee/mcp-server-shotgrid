@@ -9,7 +9,7 @@ from shotgrid_rest import ShotGridRest, EXCLUDE_KEYS, ALL_ENTITY_TYPES
 SG = ShotGridRest()
 
 # Initialize FastMCP server
-mcp = FastMCP("mcp-server-shotgrid-rest")
+mcp = FastMCP("mcp-server-shotgrid")
 
 GENERAL_FIELDS = fields = [
     "name",
