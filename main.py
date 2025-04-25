@@ -102,9 +102,10 @@ async def get_all_sequences_in_project(project_name: str):
         List[dict]: A list of dictionaries, each containing details for a sequence,
             including at least the sequence's name, code, status, and associated project.
     """
+    fields = ["name", "code", "sg_status_list", "project", "updated_at"]
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{SG.api_host}/entity/sequences?filter[project.Project.name]={project_name}&fields=name,code,sg_status_list,project,updated_at",
+            f"{SG.api_host}/entity/sequences?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
             auth=SG.auth,
         )
         data = response.json().get("data", [])
@@ -130,9 +131,10 @@ async def get_all_shots_in_project(project_name: str):
                 - sg_sequence: The sequence to which the shot belongs.
                 - updated_at: The timestamp of the last update to the shot.
     """
+    fields = ["name", "code", "sg_status_list", "sg_sequence", "updated_at"]
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{SG.api_host}/entity/shots?filter[project.Project.name]={project_name}&fields=name,code,sg_status_list,sg_sequence,updated_at",
+            f"{SG.api_host}/entity/shots?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
             auth=SG.auth,
         )
         data = response.json().get("data", [])
@@ -153,9 +155,10 @@ async def get_all_assets_in_project(project_name: str):
         List[dict]: A list of dictionaries, each containing details for an asset,
             including at least the asset's name, code, status, last update time, and asset type.
     """
+    fields = ["name", "code", "sg_status_list", "updated_at", "sg_asset_type"]
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            f"{SG.api_host}/entity/assets?filter[project.Project.name]={project_name}&fields=name,code,sg_status_list,updated_at,sg_asset_type",
+            f"{SG.api_host}/entity/assets?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
             auth=SG.auth,
         )
         data = response.json().get("data", [])
@@ -190,6 +193,34 @@ async def get_all_assets_code_contains(code: str):
 
 
 @mcp.tool()
+async def get_all_tasks_in_project(project_id: int):
+    """
+    Retrieve all tasks within a specified project in ShotGrid.
+
+    Args:
+        project_id (int): The unique ID of the project for which to retrieve tasks.
+
+    Returns:
+        List[dict]: A list of dictionaries, each containing details for a task,
+            including at least the task's name (content), status, ID, last update time, and project.
+    """
+    filters = [["project.Project.id", "is", project_id]]
+    fields = [
+        "content",
+        "sg_status_list",
+        "id",
+        "updated_at",
+        "project",
+        "task_assignees",
+    ]
+    resp = await SG.post_request(
+        "/entity/tasks/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    return data
+
+
+@mcp.tool()
 async def get_all_tasks_assigned_to_user(user_id: int):
     """
     Retrieve all tasks assigned to a specific user in ShotGrid.
@@ -202,7 +233,14 @@ async def get_all_tasks_assigned_to_user(user_id: int):
             including at least the task's name (content), status, ID, last update time, and project.
     """
     filters = [["task_assignees", "is", {"type": "HumanUser", "id": user_id}]]
-    fields = ["content", "sg_status_list", "id", "updated_at", "project"]
+    fields = [
+        "content",
+        "sg_status_list",
+        "id",
+        "updated_at",
+        "project",
+        "task_assignees",
+    ]
     resp = await SG.post_request(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
@@ -228,7 +266,15 @@ async def get_all_tasks_assigned_to_user_in_project_name(
         ["project.Project.name", "is", project_name],
     ]
 
-    fields = ["content", "sg_status_list", "id", "updated_at", "project", "updated_at"]
+    fields = [
+        "content",
+        "sg_status_list",
+        "id",
+        "updated_at",
+        "project",
+        "updated_at",
+        "task_assignees",
+    ]
     resp = await SG.post_request(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
@@ -375,6 +421,8 @@ async def get_user_by_id(user_id: int):
             auth=SG.auth,
         )
         data = response.json().get("data", [])
+        if data:
+            data = [remove_exclude_fields(d) for d in data]
         return data
 
 
@@ -461,15 +509,94 @@ async def get_all_versions_with_task(task_id: int):
                 - description: The description of the version, if provided.
                 - sg_status_list: The status of the version (e.g., "wip", "fin", etc.).
     """
+    fields = [
+        "user",
+        "updated_at",
+        "code",
+        "sg_path_to_movie",
+        "sg_path_to_frames",
+        "description",
+        "sg_status_list",
+    ]
     async with httpx.AsyncClient() as client:
 
         response = await client.get(
-            f"{SG.api_host}/entity/versions?filter[sg_task.Task.id]={task_id}&fields=user,updated_at,code,sg_path_to_movie,sg_path_to_frames,description,sg_status_list",
+            f"{SG.api_host}/entity/versions?filter[sg_task.Task.id]={task_id}&fields={','.join(fields)}",
             auth=SG.auth,
         )
         data = response.json().get("data", [])
         return data
 
+
+@mcp.tool()
+async def get_all_versions_in_project(project_id: int):
+    """
+    Retrieve all version entities in ShotGrid that are linked to a specific project.
+
+    Args:
+        project_id (int): The ID of the project for which to retrieve associated versions.
+
+    Returns:
+        List[dict]: A list of dictionaries, each representing a version associated with the given project.
+            Each dictionary contains fields such as:
+                - user: The user who created the version.
+                - updated_at: The timestamp of the last update to the version.
+                - code: The version's code or name.
+                - sg_path_to_movie: Path to the version's movie file, if available.
+                - sg_path_to_frames: Path to the version's frames, if available.
+                - description: The description of the version, if provided.
+                - sg_status_list: The status of the version (e.g., "wip", "fin", etc.).
+    """
+    filters = [["project.Project.id", "is", project_id]]
+    fields = [
+        "user",
+        "updated_at",
+        "code",
+        "sg_path_to_movie",
+        "sg_path_to_frames",
+        "description",
+        "sg_status_list",
+    ]
+    resp = await SG.post_request(
+        "/entity/versions/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    return data
+
+@mcp.tool()
+async def get_all_versions_in_project_updated_in_last_n_days(
+    project_id: int, n: int
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve all versions in a specific project that have been updated within the last n days.
+
+    Args:
+        project_id (int): The ID of the project to filter versions by.
+        n (int): The number of days to look back for recently updated versions.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, each representing a version associated with the given project.
+            Each dictionary contains fields such as user, updated_at, code, sg_path_to_movie,
+            sg_path_to_frames, description, and sg_status_list.
+    """
+    filters = [
+        ["updated_at", "in_last", [n, "DAY"]],
+        ["project.Project.id", "is", project_id],
+    ]
+    fields = [
+        "user",
+        "updated_at",
+        "code",
+        "sg_path_to_movie",
+        "sg_path_to_frames",
+        "description",
+        "sg_status_list",
+    ]
+    resp = await SG.post_request(
+        "/entity/versions/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    return data
 
 @mcp.tool()
 async def get_entities_updated_in_last_n_days(
