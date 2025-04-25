@@ -151,7 +151,7 @@ async def get_all_shots_code_contains(shot_code: str):
     filters = [["code", "contains", shot_code]]
     fields = ["code", "sg_status_list", "sg_sequence", "updated_at"]
     response = await SG.post_request(
-        "/entity/shots", json={"filters": filters, "fields": fields}
+        "/entity/shots/_search", json={"filters": filters, "fields": fields}
     )
     data = response.get("data", [])
     return data
