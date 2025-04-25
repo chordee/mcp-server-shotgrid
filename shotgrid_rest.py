@@ -9,7 +9,8 @@ from shotgrid_options import (
     FILTER_RELS,
 )
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class ShotGridRest:
@@ -50,19 +51,16 @@ class ShotGridRest:
             self.auth: The OAuth2 authentication object used for API requests.
             self.client_id: Stores the provided client ID.
             self.client_secret: Stores the provided client secret.
-
-        Prints:
-            The state of the authentication process for debugging purposes.
         """
         self.client_id = client_id
         self.client_secret = client_secret
-        print("Token accessing...")
+        logger.info("Token accessing...")
         self.auth = OAuth2ClientCredentials(
             f"{self.host}/api/v1.1/auth/access_token",
             client_id=self.client_id,
             client_secret=self.client_secret,
         )
-        print("Result:", self.auth.state)
+        logger.info("Result:", self.auth.state)
 
     async def post_request(
         self,
