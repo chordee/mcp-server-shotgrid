@@ -11,7 +11,7 @@ SG = ShotGridRest()
 # Initialize FastMCP server
 mcp = FastMCP("mcp-server-shotgrid")
 
-GENERAL_FIELDS = fields = [
+GENERAL_FIELDS = [
     "name",
     "updated_at",
     "sg_status_list",
@@ -38,12 +38,26 @@ async def get_all_projects():
                 - id: The unique identifier of the project.
                 - updated_at: The timestamp of the last update to the project.
     """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{SG.api_host}/entity/projects?fields=name,code,updated_at", auth=SG.auth
-        )
-        data = response.json().get("data", [])
-        return data
+    fields = [
+        "name",
+        "code",
+        "id",
+        "updated_at",
+    ]
+    params = {"fields": ",".join(fields)}
+    response = await SG.get_request("/entity/projects", params=params)
+    data = response.get("data", [])
+    return data
+
+
+def remove_exclude_fields(data: Dict) -> Dict:
+    for exclude_key in EXCLUDE_KEYS:
+        if exclude_key in data["attributes"].keys():
+            del data["attributes"][exclude_key]
+    for field in list(data["attributes"].keys()):
+        if field.startswith("step_"):
+            del data["attributes"][field]
+    return data
 
 
 @mcp.tool()
@@ -58,12 +72,11 @@ async def get_all_users():
                 - name: The user's full name.
             Additional user-related fields may also be included depending on ShotGrid configuration.
     """
-    async with httpx.AsyncClient() as client:
-        reop = await client.get(
-            f"{SG.api_host}/entity/HumanUsers?fields=login,name", auth=SG.auth
-        )
-        data = reop.json().get("data", [])
-        return data
+    fields = ["login", "name"]
+    params = {"fields": ",".join(fields)}
+    response = await SG.get_request("/entity/HumanUsers", params=params)
+    data = response.get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -103,15 +116,10 @@ async def get_all_sequences_in_project(project_name: str):
             including at least the sequence's name, code, status, and associated project.
     """
     fields = ["name", "code", "sg_status_list", "project", "updated_at"]
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{SG.api_host}/entity/sequences?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        for d in data:
-            d.pop("links", None)
-        return data
+    params = {"fields": ",".join(fields), "filter[project.Project.name]": project_name}
+    response = await SG.get_request("/entity/sequences", params=params)
+    data = response.get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -132,15 +140,13 @@ async def get_all_shots_in_project(project_name: str):
                 - updated_at: The timestamp of the last update to the shot.
     """
     fields = ["name", "code", "sg_status_list", "sg_sequence", "updated_at"]
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{SG.api_host}/entity/shots?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        for d in data:
-            d.pop("links", None)
-        return data
+    params = {
+        "fields": ",".join(fields),
+        "filter[project.Project.name]": project_name,
+    }
+    response = await SG.get_request("/entity/shots", params=params)
+    data = response.get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -156,15 +162,13 @@ async def get_all_assets_in_project(project_name: str):
             including at least the asset's name, code, status, last update time, and asset type.
     """
     fields = ["name", "code", "sg_status_list", "updated_at", "sg_asset_type"]
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{SG.api_host}/entity/assets?filter[project.Project.name]={project_name}&fields={','.join(fields)}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        for d in data:
-            d.pop("links", None)
-        return data
+    params = {
+        "fields": ",".join(fields),
+        "filter[project.Project.name]": project_name,
+    }
+    response = await SG.get_request("/entity/assets", params=params)
+    data = response.get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -272,7 +276,6 @@ async def get_all_tasks_assigned_to_user_in_project_name(
         "id",
         "updated_at",
         "project",
-        "updated_at",
         "task_assignees",
     ]
     resp = await SG.post_request(
@@ -351,20 +354,16 @@ async def get_project_by_name(name: str):
         A dictionary containing the project's details, including name, status, type,
         and other relevant fields as specified in the documentation.
     """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/projects/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/projects?filter[name]={name}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
+    fields = await SG.fetch_entity_fields("projects")
+    params = {
+        "fields": ",".join(fields),
+        "filter[name]": name,
+    }
+    response = await SG.get_request("/entity/projects", params=params)
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    return data
 
 
 @mcp.tool()
@@ -378,26 +377,18 @@ async def get_asset_by_id(asset_id: int):
         A dictionary containing the asset's details, including name, status, type,
         and other relevant fields as specified in the documentation.
     """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/assets/fields", auth=SG.auth
-        )
-
-        fields = ",".join(
-            [
-                field
-                for field in fileds_response.json()["data"].keys()
-                if not field.startswith("step")
-            ]
-        )
-        response = await client.get(
-            f"{SG.api_host}/entity/assets?filter[id]={asset_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
+    fields = await SG.fetch_entity_fields("assets")
+    params = {
+        "fields": ",".join(
+            [field for field in fields if not field.startswith("step_")]
+        ),
+        "filter[id]": asset_id,
+    }
+    response = await SG.get_request("/entity/assets", params=params)
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    return data
 
 
 @mcp.tool()
@@ -410,20 +401,13 @@ async def get_user_by_id(user_id: int):
     Returns:
         A dictionary containing the user's details, including login, name, and other relevant fields.
     """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/HumanUsers/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/HumanUsers?filter[id]={user_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
+    fields = await SG.fetch_entity_fields("HumanUsers")
+    params = {"fields": ",".join(fields), "filter[id]": user_id}
+    response = await SG.get_request("/entity/HumanUsers", params=params)
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    return data
 
 
 @mcp.tool()
@@ -434,17 +418,16 @@ async def get_user_by_login(login: str):
     Returns:
         A dictionary containing the user's details, including login, name, and other relevant fields.
     """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/HumanUsers/fields", auth=SG.auth
-        )
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/HumanUsers?filter[login]={login}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        return data
+    fields = await SG.fetch_entity_fields("HumanUsers")
+    params = {
+        "fields": ",".join(fields),
+        "filter[login]": login,
+    }
+    response = await SG.get_request("/entity/HumanUsers", params=params)
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    return data
 
 
 @mcp.tool()
@@ -459,16 +442,15 @@ async def get_all_notes_with_version(version_id: int):
         List[dict]: A list of dictionaries, each representing a note associated with the given version.
 
     """
-    async with httpx.AsyncClient() as client:
-
-        response = await client.get(
-            f"{SG.api_host}/entity/versions?filter[id]={version_id}&fields=notes",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = data[0].get("relationships", {}).get("notes", {}).get("data", [])
-        return data
+    params = {
+        "fields": "notes",
+        "filter[id]": version_id,
+    }
+    response = await SG.get_request("/entity/versions", params=params)
+    data = response.get("data", [])
+    if data:
+        data = data[0].get("relationships", {}).get("notes", {}).get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -479,15 +461,15 @@ async def get_all_replies_with_note_id(note_id: int):
     Returns:
         A list of dictionaries, each containing reply details such as content, author, and other relevant fields.
     """
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"{SG.api_host}/entity/notes?filter[id]={note_id}&fields=replies",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = data[0].get("relationships", {}).get("replies", {}).get("data", [])
-        return data
+    params = {
+        "fields": "replies",
+        "filter[id]": note_id,
+    }
+    response = await SG.get_request("/entity/notes", params=params)
+    data = response.get("data", [])
+    if data:
+        data = data[0].get("relationships", {}).get("replies", {}).get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -518,14 +500,13 @@ async def get_all_versions_with_task(task_id: int):
         "description",
         "sg_status_list",
     ]
-    async with httpx.AsyncClient() as client:
-
-        response = await client.get(
-            f"{SG.api_host}/entity/versions?filter[sg_task.Task.id]={task_id}&fields={','.join(fields)}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        return data
+    params = {
+        "fields": ",".join(fields),
+        "filter[sg_task.Task.id]": task_id,
+    }
+    response = await SG.get_request("/entity/versions", params=params)
+    data = response.get("data", [])
+    return data
 
 
 @mcp.tool()
@@ -563,6 +544,7 @@ async def get_all_versions_in_project(project_id: int):
     data = resp.get("data", [])
     return data
 
+
 @mcp.tool()
 async def get_all_versions_in_project_updated_in_last_n_days(
     project_id: int, n: int
@@ -597,6 +579,7 @@ async def get_all_versions_in_project_updated_in_last_n_days(
     )
     data = resp.get("data", [])
     return data
+
 
 @mcp.tool()
 async def get_entities_updated_in_last_n_days(
@@ -663,37 +646,25 @@ async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int):
         dict: A dictionary containing the entity's details, including fields such as name, status, type, id
             and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
     """
-    async with httpx.AsyncClient() as client:
-        fileds_response = await client.get(
-            f"{SG.api_host}/schema/{entity_type}/fields", auth=SG.auth
-        )
-
-        fields = ",".join(fileds_response.json()["data"].keys())
-        response = await client.get(
-            f"{SG.api_host}/entity/{entity_type}?filter[id]={entity_id}&fields={fields}",
-            auth=SG.auth,
-        )
-        data = response.json().get("data", [])
-        if data:
-            data = [remove_exclude_fields(d) for d in data]
-        return data
-
-
-def remove_exclude_fields(data: Dict) -> Dict:
-    for exclude_key in EXCLUDE_KEYS:
-        if exclude_key in data["attributes"].keys():
-            del data["attributes"][exclude_key]
-    for field in list(data["attributes"].keys()):
-        if field.startswith("step_"):
-            del data["attributes"][field]
+    fields = await SG.fetch_entity_fields(entity_type)
+    params = {
+        "fields": ",".join(fields),
+        "filter[id]": entity_id,
+    }
+    response = await SG.get_request(f"/entity/{entity_type}", params=params)
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
     return data
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-host", "--host", type=str, help="host address")
-    parser.add_argument("-ci", "--client-id", type=str, help="client-id")
-    parser.add_argument("-cs", "--client-secret", type=str, help="client-secret")
+    parser.add_argument("-host", "--host", type=str, help="host address", required=True)
+    parser.add_argument("-ci", "--client-id", type=str, help="client-id", required=True)
+    parser.add_argument(
+        "-cs", "--client-secret", type=str, help="client-secret", required=True
+    )
     args = parser.parse_args()
     SG.set_host(args.host)
     SG.access_token(client_id=args.client_id, client_secret=args.client_secret)
