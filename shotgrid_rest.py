@@ -85,7 +85,24 @@ class ShotGridRest:
             resp.raise_for_status()
             return resp.json()
 
-    async def _fetch_entity_fields(self, entity_type):
+    async def get_request(self, path: str, params: Optional[Dict[str, Any]] = None):
+        """
+        Send an asynchronous GET request to the ShotGrid API with OAuth2 authentication.
+
+        Args:
+            path (str): The API endpoint path to append to the base API host URL.
+            params (Optional[Dict[str, Any]]): The query parameters to include in the GET request.
+
+        Returns:
+            dict: The JSON-decoded response from the ShotGrid API.
+        """
+        url = f"{self.api_host}{path}"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, params=params, auth=self.auth)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def fetch_entity_fields(self, entity_type):
         """
         Fetch all field names for a given ShotGrid entity type.
 
