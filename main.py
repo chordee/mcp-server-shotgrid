@@ -1,28 +1,24 @@
 import argparse
-import httpx
-import asyncio
 from mcp.server.fastmcp import FastMCP
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
-from shotgrid_rest import ShotGridRest, EXCLUDE_KEYS, ALL_ENTITY_TYPES
+from shotgrid_rest import ShotGridRest
+from shotgrid_options import GENERAL_FIELDS, EXCLUDE_KEYS, ALL_ENTITY_TYPES
 
 SG = ShotGridRest()
 
 # Initialize FastMCP server
 mcp = FastMCP("mcp-server-shotgrid")
 
-GENERAL_FIELDS = [
-    "name",
-    "updated_at",
-    "sg_status_list",
-    "project",
-    "code",
-    "user",
-    "id",
-    "tasks",
-    "content",
-    "cached_display_name",
-]
+
+def remove_exclude_fields(data: Dict) -> Dict:
+    for exclude_key in EXCLUDE_KEYS:
+        if exclude_key in data["attributes"].keys():
+            del data["attributes"][exclude_key]
+    for field in list(data["attributes"].keys()):
+        if field.startswith("step_"):
+            del data["attributes"][field]
+    return data
 
 
 @mcp.tool()
@@ -47,16 +43,6 @@ async def get_all_projects():
     params = {"fields": ",".join(fields)}
     response = await SG.get_request("/entity/projects", params=params)
     data = response.get("data", [])
-    return data
-
-
-def remove_exclude_fields(data: Dict) -> Dict:
-    for exclude_key in EXCLUDE_KEYS:
-        if exclude_key in data["attributes"].keys():
-            del data["attributes"][exclude_key]
-    for field in list(data["attributes"].keys()):
-        if field.startswith("step_"):
-            del data["attributes"][field]
     return data
 
 
