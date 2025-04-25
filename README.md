@@ -27,10 +27,12 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 2. **Run the server** (replace placeholders with your actual values):
 
    ```bash
-   uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-id your_client_id --client-secret your_client_secret
+   uv run --directory {REPO_DIR} main.py -host https://your-shotgrid-url -ci your_client_id -cs your_client_secret
    ```
 
-   By default, the server uses FastMCP and communicates via `transport="stdio"`. To use HTTP transport, add `--transport http` to the command.
+   All three arguments are required. Both short (`-host`, `-ci`, `-cs`) and long (`--host`, `--client-id`, `--client-secret`) forms are supported.
+
+   The server uses FastMCP and communicates via `transport="stdio"` only.
 
 3. **Integrate with your LLM agent**:
    - The server exposes tools via MCP for LLMs to call.
@@ -39,7 +41,8 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 
 All tools are asynchronous and exposed via FastMCP.
 
-**Available Tools:**
+**Available Tools:**  
+Arguments in parentheses are required.
 
 - `get_all_projects()`
 - `get_all_users()`
@@ -66,7 +69,7 @@ All tools are asynchronous and exposed via FastMCP.
 - `get_entities_updated_in_last_n_days_with_project(entity_type: str, project_id: int, n: int)`
 - `get_entity_by_id(entity_type: str, entity_id: int)`
 
-See `main.py` for full argument and return details.
+Some tools dynamically fetch entity fields and exclude certain keys for cleaner output. See `main.py` for full argument and return details.
 
 ## Example
 
@@ -78,11 +81,12 @@ uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-
 
 - Ensure your ShotGrid account has API access enabled.
 - The server uses OAuth2 for authentication.
-- The server is implemented using FastMCP and runs with `transport="stdio"` by default.
+- The server is implemented using FastMCP and runs with `transport="stdio"` only.
 - Command-line arguments:  
-  - `--host` (ShotGrid host URL)  
-  - `--client-id` (OAuth2 client ID)  
-  - `--client-secret` (OAuth2 client secret)
+  - `-host` or `--host` (ShotGrid host URL)  
+  - `-ci` or `--client-id` (OAuth2 client ID)  
+  - `-cs` or `--client-secret` (OAuth2 client secret)
+- Some tools use dynamic field fetching and exclude certain keys (see `remove_exclude_fields` in `main.py`).
 - Extend or customize the tools in `main.py` as needed for your workflow.
 - The ShotGrid REST API logic is implemented in `shotgrid_rest.py`.
 
