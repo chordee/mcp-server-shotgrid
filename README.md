@@ -1,6 +1,6 @@
 # MCP Server for Autodesk ShotGrid REST API
 
-This project provides an MCP (Model Context Protocol) server, implemented using [FastMCP](https://github.com/modelcontextprotocol/fastmcp), that enables Large Language Model (LLM) agents to interact programmatically with Autodesk ShotGrid via its REST API. It exposes a set of tools for querying and managing ShotGrid entities such as projects, assets, and tasks. The server runs with `transport="stdio"` for integration with LLM-based workflows.
+This project provides an MCP (Model Context Protocol) server, implemented using [FastMCP](https://github.com/modelcontextprotocol/fastmcp), that enables Large Language Model (LLM) agents to interact programmatically with Autodesk ShotGrid via its REST API. It exposes a set of tools for querying and managing ShotGrid entities such as projects, assets, and tasks. The server supports both HTTP and `transport="stdio"` modes for integration with LLM-based workflows.
 
 ## Features
 
@@ -9,6 +9,8 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 - Query projects, assets, and tasks.
 - Retrieve detailed information about entities.
 - Designed for integration with LLM-based workflows.
+- Modular codebase: `main.py` provides the MCP server and tool definitions, while `shotgrid_rest.py` implements the ShotGrid API wrapper.
+- Includes `test_main.py` for automated testing.
 
 ## Requirements
 
@@ -22,11 +24,13 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 1. **Set up ShotGrid credentials**:
    - Obtain your ShotGrid host URL, client ID, and client secret.
 
-2. **Run the server**:
+2. **Run the server** (replace placeholders with your actual values):
+
    ```bash
-   uv run --directory {REPO_DIR} main.py --host <SHOTGRID_HOST> --client-id <CLIENT_ID> --client-secret <CLIENT_SECRET>
+   uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-id your_client_id --client-secret your_client_secret
    ```
-   The server will start using FastMCP and communicate via `transport="stdio"`.
+
+   By default, the server uses FastMCP and communicates via `transport="stdio"`. To use HTTP transport, add `--transport http` to the command.
 
 3. **Integrate with your LLM agent**:
    - The server exposes tools via MCP for LLMs to call.
@@ -37,59 +41,32 @@ All tools are asynchronous and exposed via FastMCP.
 
 **Available Tools:**
 
-- `get_all_projects() -> List[dict]`  
-  Retrieve all projects. Returns a list of dicts with at least `name`, `code`, and `id`.
+- `get_all_projects()`
+- `get_all_users()`
+- `get_all_projects_name_contains(name: str)`
+- `get_all_sequences_in_project(project_name: str)`
+- `get_all_shots_in_project(project_name: str)`
+- `get_all_assets_in_project(project_name: str)`
+- `get_all_assets_code_contains(code: str)`
+- `get_all_tasks_in_project(project_id: int)`
+- `get_all_tasks_assigned_to_user(user_id: int)`
+- `get_all_tasks_assigned_to_user_in_project_name(user_id: int, project_name: str)`
+- `get_all_tasks_with_shot(shot_id: int)`
+- `get_all_tasks_with_asset(asset_id: int)`
+- `get_project_by_name(name: str)`
+- `get_asset_by_id(asset_id: int)`
+- `get_user_by_id(user_id: int)`
+- `get_user_by_login(login: str)`
+- `get_all_notes_with_version(version_id: int)`
+- `get_all_replies_with_note_id(note_id: int)`
+- `get_all_versions_with_task(task_id: int)`
+- `get_all_versions_in_project(project_id: int)`
+- `get_all_versions_in_project_updated_in_last_n_days(project_id: int, n: int)`
+- `get_entities_updated_in_last_n_days(entity_type: str, n: int)`
+- `get_entities_updated_in_last_n_days_with_project(entity_type: str, project_id: int, n: int)`
+- `get_entity_by_id(entity_type: str, entity_id: int)`
 
-- `get_all_users() -> List[dict]`  
-  Retrieve all users. Returns a list of dicts with at least the `login` field.
-
-- `get_all_sequences_in_project(project_name: str) -> List[dict]`  
-  Retrieve all sequences within a specified project from ShotGrid. Returns a list of dicts with at least the sequence's `name`, `code`, `sg_status_list`, and associated `project`.
-
-- `get_all_shots_in_project(project_name: str) -> List[dict]`  
-  Retrieve all shots within a specified project from ShotGrid. Returns a list of dicts with at least the shot's `name`, `code`, `sg_status_list`, and associated `sg_sequence`.
-
-- `get_all_assets_in_project(project_name: str) -> List[dict]`  
-  List all assets in a project. Returns dicts with `name`, `code`, `sg_status_list`, `updated_at`, and `sg_asset_type`.
-
-- `get_all_tasks_assigned_to_user(user_id: int) -> List[dict]`  
-  List all tasks assigned to a user. Returns dicts with `content`, `sg_status_list`, `id`, `updated_at`, and `project`.
-
-- `get_project_by_name(name: str) -> List[dict]`  
-  Get details for a project by name. Returns a list of dicts with all available fields.
-
-- `get_project_by_id(project_id: int) -> List[dict]`  
-  Get details for a project by ID. Returns a list of dicts with all available fields.
-
-- `get_asset_by_id(asset_id: int) -> List[dict]`  
-  Get detailed info for an asset by ID. Returns a list of dicts with all available fields.
-
-- `get_user_by_id(user_id: int) -> List[dict]`  
-  Get detailed info for a user by ID. Returns a list of dicts with all available fields.
-
-- `get_user_by_login(login: str) -> List[dict]`  
-  Get detailed info for a user by login. Returns a list of dicts with all available fields.
-
-- `get_shot_by_id(shot_id: int) -> List[dict]`  
-  Get detailed info for a shot by ID. Returns a list of dicts with all available fields.
-
-- `get_sequence_by_id(sequence_id: int) -> List[dict]`  
-  Get detailed info for a sequence by ID. Returns a list of dicts with all available fields.
-
-- `get_task_by_id(task_id: int) -> List[dict]`  
-  Get detailed info for a task by ID. Returns a list of dicts with all available fields.
-
-- `get_tasks_with_asset_id(asset_id: int) -> List[dict]`  
-  List all tasks for a given asset ID.
-
-- `get_note_by_id(note_id: int) -> List[dict]`  
-  Get detailed information about a note by its ID on ShotGrid. Returns a list of dicts with all available fields.
-
-- `get_version_by_id(version_id: int) -> List[dict]`  
-  Get detailed information about a version by its ID on ShotGrid. Returns a list of dicts with all available fields.
-
-- `get_all_versions_with_task(task_id: int) -> List[dict]`  
-  Retrieve all version entities in ShotGrid that are linked to a specific task. Returns a list of dicts with fields such as `user`, `updated_at`, `code`, `sg_path_to_movie`, `sg_path_to_frames`, and `description`.
+See `main.py` for full argument and return details.
 
 ## Example
 
@@ -107,6 +84,7 @@ uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-
   - `--client-id` (OAuth2 client ID)  
   - `--client-secret` (OAuth2 client secret)
 - Extend or customize the tools in `main.py` as needed for your workflow.
+- The ShotGrid REST API logic is implemented in `shotgrid_rest.py`.
 
 ## License
 
