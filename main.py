@@ -119,18 +119,40 @@ async def get_all_shots_in_project(project_name: str):
     Returns:
         List[dict]: A list of dictionaries, each representing a shot in the project.
             Each dictionary includes at least the following fields:
-                - name: The name of the shot.
                 - code: The shot code.
                 - sg_status_list: The status of the shot.
                 - sg_sequence: The sequence to which the shot belongs.
                 - updated_at: The timestamp of the last update to the shot.
     """
-    fields = ["name", "code", "sg_status_list", "sg_sequence", "updated_at"]
+    fields = ["code", "sg_status_list", "sg_sequence", "updated_at"]
     params = {
         "fields": ",".join(fields),
         "filter[project.Project.name]": project_name,
     }
     response = await SG.get_request("/entity/shots", params=params)
+    data = response.get("data", [])
+    return data
+
+
+@mcp.tool()
+async def get_all_shots_code_contains(shot_code: str):
+    """
+    Retrieve all shots within a specified project from ShotGrid.
+    Args:
+        shot_code (str): The name of the shot for which to retrieve shots.
+    Returns:
+        List[dict]: A list of dictionaries, each representing a shot in the project.
+            Each dictionary includes at least the following fields:
+                - code: The shot code.
+                - sg_status_list: The status of the shot.
+                - sg_sequence: The sequence to which the shot belongs.
+                - updated_at: The timestamp of the last update to the shot.
+    """
+    filters = [["code", "contains", shot_code]]
+    fields = ["code", "sg_status_list", "sg_sequence", "updated_at"]
+    response = await SG.post_request(
+        "/entity/shots", json={"filters": filters, "fields": fields}
+    )
     data = response.get("data", [])
     return data
 
