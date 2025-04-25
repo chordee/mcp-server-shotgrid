@@ -41,36 +41,6 @@ ALL_ENTITY_TYPES = Literal[
     "attachments",
 ]
 
-EXPLAIN_FIELDS = {
-    "sg_res_width": "Resolution Width",
-    "sg_res_height": "Resolution Height",
-    "description": "Description",
-    "start_date": "Start Date",
-    "end_date": "End Date",
-    "sg_render_engine": "Render Engine",
-    "updated_at": "Last Updated Time",
-    "created_at": "Created Time",
-    "code": "Code Name (Alternaitve Name)",
-    "name": "Name",
-    "type": "Entity Type",
-    "id": "ID",
-    "sg_fps": "FPS",
-    "sg_project_root": "Project Root",
-    "tank_name": "Folder Name",
-    "sg_status": "Status",
-    "landing_page_url": "Address on Shotgrid",
-    "sg_pmb_id": "PMB ID",
-    "archived": "Is Archived",
-    "sg_zulip_stream": "Zulip Stream",
-    "sg_unit": "Unit",
-    "sg_scale": "Scale",
-    "cached_display_name": "Display Name",
-    "sg_type": "Description Type",
-    "sg_status_list": "Status",
-    "sg_asset_type": "Asset Type",
-}
-
-EXPLAIN_RELS = {"shots": "Shot", "tasks": "Tasks"}
 
 FILTER_RELS = Literal[
     "is",  # [field_value] | None,
