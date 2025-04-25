@@ -1,4 +1,5 @@
 import httpx
+import logging
 from typing import Dict, Any, Optional, Literal, List, Union
 from httpx_auth import OAuth2ClientCredentials
 from dataclasses import dataclass
@@ -7,6 +8,8 @@ from shotgrid_options import (
     HASH_HEADER,
     FILTER_RELS,
 )
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class ShotGridRest:
