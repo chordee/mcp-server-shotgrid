@@ -455,6 +455,44 @@ async def get_user_by_login(login: str):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+@mcp.tool()
+async def get_users_name_contains(name: str):
+    """Get detailed information about users whose names contain a specific substring on ShotGrid.
+    Args:
+        name: The substring to search for in user names.
+    Returns:
+        A list of dictionaries, each containing the user's details, including login, name, and other relevant fields.
+    """
+    filters = [["name", "contains", name]]
+    fields = ["login", "name"]
+    response = await SG.post_request(
+        "/entity/HumanUsers/_search", json={"filters": filters, "fields": fields}
+    )
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
+@mcp.tool()
+async def get_users_login_contains(login: str):
+    """Get detailed information about users whose logins contain a specific substring on ShotGrid.
+    Args:
+        login: The substring to search for in user logins.
+    Returns:
+        A list of dictionaries, each containing the user's details, including login, name, and other relevant fields.
+    """
+    filters = [["login", "contains", login]]
+    fields = ["login", "name"]
+    response = await SG.post_request(
+        "/entity/HumanUsers/_search", json={"filters": filters, "fields": fields}
+    )
+    data = response.get("data", [])
+    if data:
+        data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
 
 @mcp.tool()
 async def get_all_notes_with_version(version_id: int):
@@ -578,7 +616,7 @@ async def get_all_versions_in_project(project_id: int):
 @mcp.tool()
 async def get_all_versions_in_project_updated_in_last_n_days(
     project_id: int, n: int
-) -> List[Dict[str, Any]]:
+) :
     """
     Retrieve all versions in a specific project that have been updated within the last n days.
 
@@ -615,7 +653,7 @@ async def get_all_versions_in_project_updated_in_last_n_days(
 @mcp.tool()
 async def get_entities_updated_in_last_n_days(
     entity_type: str, n: int
-) -> List[Dict[str, Any]]:
+):
     """
     Retrieve entities of a specified type that have been updated within the last n days.
 
@@ -640,7 +678,7 @@ async def get_entities_updated_in_last_n_days(
 @mcp.tool()
 async def get_entities_updated_in_last_n_days_with_project(
     entity_type: str, project_id: int, n: int
-) -> List[Dict[str, Any]]:
+):
     """
     Retrieve entities of a specified type that have been updated within the last n days and belong to a specific project.
 
