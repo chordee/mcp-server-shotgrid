@@ -1,4 +1,5 @@
 import argparse
+import json
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Any
 
@@ -43,6 +44,7 @@ async def get_all_projects():
     params = {"fields": ",".join(fields)}
     response = await SG.get_request("/entity/projects", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -62,6 +64,7 @@ async def get_all_users():
     params = {"fields": ",".join(fields)}
     response = await SG.get_request("/entity/HumanUsers", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -86,6 +89,7 @@ async def get_all_projects_name_contains(name: str):
         "/entity/projects/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -105,6 +109,7 @@ async def get_all_sequences_in_project(project_name: str):
     params = {"fields": ",".join(fields), "filter[project.Project.name]": project_name}
     response = await SG.get_request("/entity/sequences", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -131,6 +136,7 @@ async def get_all_shots_in_project(project_name: str):
     }
     response = await SG.get_request("/entity/shots", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -154,6 +160,7 @@ async def get_all_shots_code_contains(shot_code: str):
         "/entity/shots/_search", json={"filters": filters, "fields": fields}
     )
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -176,6 +183,7 @@ async def get_all_assets_in_project(project_name: str):
     }
     response = await SG.get_request("/entity/assets", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -201,6 +209,7 @@ async def get_all_assets_code_contains(code: str):
         "/entity/assets/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -229,6 +238,7 @@ async def get_all_tasks_in_project(project_id: int):
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -257,6 +267,7 @@ async def get_all_tasks_assigned_to_user(user_id: int):
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -290,6 +301,7 @@ async def get_all_tasks_assigned_to_user_in_project_name(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -319,6 +331,7 @@ async def get_all_tasks_with_shot(shot_id: int):
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -348,6 +361,7 @@ async def get_all_tasks_with_asset(asset_id: int):
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -371,6 +385,7 @@ async def get_project_by_name(name: str):
     data = response.get("data", [])
     if data:
         data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -396,6 +411,7 @@ async def get_asset_by_id(asset_id: int):
     data = response.get("data", [])
     if data:
         data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -415,6 +431,7 @@ async def get_user_by_id(user_id: int):
     data = response.get("data", [])
     if data:
         data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -435,6 +452,7 @@ async def get_user_by_login(login: str):
     data = response.get("data", [])
     if data:
         data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -458,6 +476,7 @@ async def get_all_notes_with_version(version_id: int):
     data = response.get("data", [])
     if data:
         data = data[0].get("relationships", {}).get("notes", {}).get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -477,6 +496,7 @@ async def get_all_replies_with_note_id(note_id: int):
     data = response.get("data", [])
     if data:
         data = data[0].get("relationships", {}).get("replies", {}).get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -514,6 +534,7 @@ async def get_all_versions_with_task(task_id: int):
     }
     response = await SG.get_request("/entity/versions", params=params)
     data = response.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -550,6 +571,7 @@ async def get_all_versions_in_project(project_id: int):
         "/entity/versions/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -586,6 +608,7 @@ async def get_all_versions_in_project_updated_in_last_n_days(
         "/entity/versions/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -610,6 +633,7 @@ async def get_entities_updated_in_last_n_days(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -638,6 +662,7 @@ async def get_entities_updated_in_last_n_days_with_project(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
@@ -663,6 +688,7 @@ async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int):
     data = response.get("data", [])
     if data:
         data = [remove_exclude_fields(d) for d in data]
+    data = json.dumps(data, ensure_ascii=False)
     return data
 
 
