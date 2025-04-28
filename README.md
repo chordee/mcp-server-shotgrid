@@ -47,8 +47,10 @@ Arguments in parentheses are required.
 - `get_all_projects()`
 - `get_all_users()`
 - `get_all_projects_name_contains(name: str)`
+- `get_all_projects_code_contains(code: str)`
 - `get_all_sequences_in_project(project_name: str)`
 - `get_all_shots_in_project(project_name: str)`
+- `get_all_shots_code_contains(shot_code: str)`
 - `get_all_assets_in_project(project_name: str)`
 - `get_all_assets_code_contains(code: str)`
 - `get_all_tasks_in_project(project_id: int)`
@@ -60,6 +62,8 @@ Arguments in parentheses are required.
 - `get_asset_by_id(asset_id: int)`
 - `get_user_by_id(user_id: int)`
 - `get_user_by_login(login: str)`
+- `get_users_name_contains(name: str)`
+- `get_users_login_contains(login: str)`
 - `get_all_notes_with_version(version_id: int)`
 - `get_all_replies_with_note_id(note_id: int)`
 - `get_all_versions_with_task(task_id: int)`

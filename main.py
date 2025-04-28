@@ -92,6 +92,29 @@ async def get_all_projects_name_contains(name: str):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+@mcp.tool()
+async def get_all_projects_code_contains(code: str):
+    """
+    Retrieve all projects from ShotGrid that contain a specific code.
+
+    Args:
+        code (str): The code to search for in project codes.
+
+    Returns:
+        List[dict]: A list of dictionaries, each representing a project.
+            Each dictionary includes at least the following fields:
+                - name: The name of the project.
+                - code: The project code.
+                - updated_at: The timestamp of the last update to the project.
+    """
+    filters = [["code", "contains", code]]
+    fields = ["name", "code", "updated_at"]
+    resp = await SG.post_request(
+        "/entity/projects/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
+    return data
 
 @mcp.tool()
 async def get_all_sequences_in_project(project_name: str):
