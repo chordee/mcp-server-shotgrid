@@ -39,6 +39,7 @@ ALL_ENTITY_TYPES = Literal[
     "steps",
     "replies",
     "attachments",
+    "bookings",
 ]
 
 
