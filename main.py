@@ -92,6 +92,7 @@ async def get_all_projects_name_contains(name: str):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+
 @mcp.tool()
 async def get_all_projects_code_contains(code: str):
     """
@@ -115,6 +116,7 @@ async def get_all_projects_code_contains(code: str):
     data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
     return data
+
 
 @mcp.tool()
 async def get_all_sequences_in_project(project_name: str):
@@ -478,6 +480,7 @@ async def get_user_by_login(login: str):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+
 @mcp.tool()
 async def get_users_name_contains(name: str):
     """Get detailed information about users whose names contain a specific substring on ShotGrid.
@@ -496,6 +499,7 @@ async def get_users_name_contains(name: str):
         data = [remove_exclude_fields(d) for d in data]
     data = json.dumps(data, ensure_ascii=False)
     return data
+
 
 @mcp.tool()
 async def get_users_login_contains(login: str):
@@ -637,9 +641,7 @@ async def get_all_versions_in_project(project_id: int):
 
 
 @mcp.tool()
-async def get_all_versions_in_project_updated_in_last_n_days(
-    project_id: int, n: int
-) :
+async def get_all_versions_in_project_updated_in_last_n_days(project_id: int, n: int):
     """
     Retrieve all versions in a specific project that have been updated within the last n days.
 
@@ -674,9 +676,83 @@ async def get_all_versions_in_project_updated_in_last_n_days(
 
 
 @mcp.tool()
-async def get_entities_updated_in_last_n_days(
-    entity_type: str, n: int
-):
+async def get_all_bookings_with_user(user_id: int):
+    """
+    Retrieve all bookings associated with a specific user in ShotGrid.
+
+    Args:
+        user_id (int): The ID of the user for which to retrieve associated bookings.
+
+    Returns:
+        str: A JSON-encoded list of dictionaries, each representing a booking associated with the given user.
+            Each dictionary contains fields such as:
+                - updated_at: The timestamp of the last update to the booking.
+                - project: The project associated with the booking.
+                - cached_display_name: The display name of the booking.
+                - vocation: The vocation associated with the booking.
+                - sg_status_list: The status of the booking.
+                - start_date: The start date of the booking.
+                - end_date: The end date of the booking.
+    """
+    filters = [["user.HumanUser.id", "is", user_id]]
+    fields = [
+        "updated_at",
+        "project",
+        "cached_display_name",
+        "vocation",
+        "sg_status_list",
+        "start_date",
+        "end_date",
+    ]
+    resp = await SG.post_request(
+        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
+@mcp.tool()
+async def get_all_bookings_in_project(project_id: int):
+    """
+    Retrieve all bookings in a specific project in ShotGrid.
+
+    Args:
+        project_id (int): The ID of the project for which to retrieve associated bookings.
+
+    Returns:
+        str: A JSON-encoded list of dictionaries, each representing a booking associated with the project.
+            Each dictionary contains fields such as:
+                - user: The user who created the booking.
+                - updated_at: The timestamp of the last update to the booking.
+                - project: The project associated with the booking.
+                - vocation: The vocation associated with the booking.
+                - sg_status_list: The status of the booking.
+                - cached_display_name: The display name of the booking.
+                - start_date: The start date of the booking.
+                - end_date: The end date of the booking.
+    """
+    filters = [
+        ["project.Project.id", "is", project_id],
+    ]
+    fields = [
+        "user",
+        "updated_at",
+        "project",
+        "vocation",
+        "sg_status_list",
+        "cached_display_name",
+        "start_date",
+        "end_date",
+    ]
+    resp = await SG.post_request(
+        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
+@mcp.tool()
+async def get_entities_updated_in_last_n_days(entity_type: str, n: int):
     """
     Retrieve entities of a specified type that have been updated within the last n days.
 
