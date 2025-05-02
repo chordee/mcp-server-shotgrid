@@ -255,20 +255,6 @@ async def get_tasks(
         "/entity/tasks/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
-    """Get detailed information about a user by their ID on ShotGrid.
-
-    Args:
-        user_id: The ID of the user to retrieve.
-
-    Returns:
-        A dictionary containing the user's details, including login, name, and other relevant fields.
-    """
-    fields = await SG.fetch_entity_fields("HumanUsers")
-    params = {"fields": ",".join(fields), "filter[id]": user_id}
-    response = await SG.get_request("/entity/HumanUsers", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
     data = json.dumps(data, ensure_ascii=False)
     return data
 
