@@ -676,24 +676,65 @@ async def get_all_versions_in_project_updated_in_last_n_days(project_id: int, n:
 
 
 @mcp.tool()
-async def get_all_bookings_with_user(user_id: int):
+async def get_all_bookings_with_user(
+    user_id: int,
+    start_date_from: List[int] = None,
+    start_date_to: List[int] = None,
+    end_date_from: List[int] = None,
+    end_date_to: List[int] = None,
+):
     """
-    Retrieve all bookings associated with a specific user in ShotGrid.
+    Retrieve all bookings for a specific user in ShotGrid, with optional date filters.
 
     Args:
-        user_id (int): The ID of the user for which to retrieve associated bookings.
+        user_id (int): The user ID.
+        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
+        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
+        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
+        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
 
     Returns:
-        str: A JSON-encoded list of dictionaries, each representing a booking associated with the given user.
-            Each dictionary contains fields such as:
-                - updated_at: The timestamp of the last update to the booking.
-                - project: The project associated with the booking.
-                - vacation: Whether the booking is marked as a vacation (boolean or relevant value).
-                - sg_status_list: The status of the booking.
-                - start_date: The start date of the booking.
-                - end_date: The end date of the booking.
+        str: JSON-encoded list of booking dictionaries, each with fields like:
+            - updated_at
+            - project
+            - vacation (True if this booking is a vacation)
+            - sg_status_list
+            - start_date
+            - end_date
     """
     filters = [["user.HumanUser.id", "is", user_id]]
+    if start_date_from:
+        filters.append(
+            [
+                "start_date",
+                "greater_than",
+                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
+            ]
+        )
+    if start_date_to:
+        filters.append(
+            [
+                "start_date",
+                "less_than",
+                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
+            ]
+        )
+    if end_date_from:
+        filters.append(
+            [
+                "end_date",
+                "greater_than",
+                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
+            ]
+        )
+    if end_date_to:
+        filters.append(
+            [
+                "end_date",
+                "less_than",
+                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
+            ]
+        )
     fields = [
         "updated_at",
         "project",
@@ -709,28 +750,70 @@ async def get_all_bookings_with_user(user_id: int):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+
 @mcp.tool()
-async def get_all_bookings_in_project(project_id: int):
+async def get_all_bookings_in_project(
+    project_id: int,
+    start_date_from: List[int] = None,
+    start_date_to: List[int] = None,
+    end_date_from: List[int] = None,
+    end_date_to: List[int] = None,
+):
     """
-    Retrieve all bookings in a specific project in ShotGrid.
+    Get all bookings in a specific project, with optional date filters.
 
     Args:
-        project_id (int): The ID of the project for which to retrieve associated bookings.
+        project_id (int): Project ID.
+        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
+        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
+        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
+        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
 
     Returns:
-        str: A JSON-encoded list of dictionaries, each representing a booking associated with the project.
-            Each dictionary contains fields such as:
-                - user: The user who created the booking.
-                - updated_at: The timestamp of the last update to the booking.
-                - project: The project associated with the booking.
-                - vacation: Whether the booking is marked as a vacation (boolean or relevant value).
-                - sg_status_list: The status of the booking.
-                - start_date: The start date of the booking.
-                - end_date: The end date of the booking.
+        str: JSON-encoded list of booking dictionaries, each with fields like:
+            - user
+            - updated_at
+            - project
+            - vacation
+            - sg_status_list
+            - start_date
+            - end_date
     """
     filters = [
         ["project.Project.id", "is", project_id],
     ]
+    if start_date_from:
+        filters.append(
+            [
+                "start_date",
+                "greater_than",
+                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
+            ]
+        )
+    if start_date_to:
+        filters.append(
+            [
+                "start_date",
+                "less_than",
+                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
+            ]
+        )
+    if end_date_from:
+        filters.append(
+            [
+                "end_date",
+                "greater_than",
+                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
+            ]
+        )
+    if end_date_to:
+        filters.append(
+            [
+                "end_date",
+                "less_than",
+                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
+            ]
+        )
     fields = [
         "user",
         "updated_at",
@@ -747,10 +830,22 @@ async def get_all_bookings_in_project(project_id: int):
     data = json.dumps(data, ensure_ascii=False)
     return data
 
+
 @mcp.tool()
-async def get_all_vacation_bookings():
+async def get_all_vacation_bookings(
+    start_date_from: List[int] = None,
+    start_date_to: List[int] = None,
+    end_date_from: List[int] = None,
+    end_date_to: List[int] = None,
+):
     """
-    Retrieve all vacation bookings in ShotGrid.
+    Retrieve all vacation bookings in ShotGrid, with optional date filters.
+
+    Args:
+        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
+        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
+        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
+        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
 
     Returns:
         str: A JSON-encoded list of dictionaries, each representing a vacation booking.
@@ -764,6 +859,38 @@ async def get_all_vacation_bookings():
     filters = [
         ["vacation", "is", True],
     ]
+    if start_date_from:
+        filters.append(
+            [
+                "start_date",
+                "greater_than",
+                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
+            ]
+        )
+    if start_date_to:
+        filters.append(
+            [
+                "start_date",
+                "less_than",
+                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
+            ]
+        )
+    if end_date_from:
+        filters.append(
+            [
+                "end_date",
+                "greater_than",
+                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
+            ]
+        )
+    if end_date_to:
+        filters.append(
+            [
+                "end_date",
+                "less_than",
+                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
+            ]
+        )
     fields = [
         "user",
         "updated_at",
@@ -777,6 +904,93 @@ async def get_all_vacation_bookings():
     data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
     return data
+
+
+@mcp.tool()
+async def get_all_bookings_in_date_range(
+    start_date_from: List[int] = None,
+    start_date_to: List[int] = None,
+    end_date_from: List[int] = None,
+    end_date_to: List[int] = None,
+):
+    """
+    Retrieve all bookings in ShotGrid, with optional date filters.
+
+    Args:
+        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
+        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
+        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
+        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
+
+    Returns:
+        str: A JSON-encoded list of dictionaries, each representing a booking.
+            Each dictionary contains fields such as:
+                - user: The user who created the booking.
+                - updated_at: The timestamp of the last update to the booking.
+                - sg_status_list: The status of the booking.
+                - start_date: The start date of the booking.
+                - end_date: The end date of the booking.
+                - project: The project associated with the booking.
+    """
+    filters = []
+    if start_date_from:
+        filters.append(
+            [
+                "start_date",
+                "greater_than",
+                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
+            ]
+        )
+    if start_date_to:
+        filters.append(
+            [
+                "start_date",
+                "less_than",
+                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
+            ]
+        )
+    if end_date_from:
+        filters.append(
+            [
+                "end_date",
+                "greater_than",
+                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
+            ]
+        )
+    if end_date_to:
+        filters.append(
+            [
+                "end_date",
+                "less_than",
+                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
+            ]
+        )
+    if (
+        not start_date_from
+        and not start_date_to
+        and not end_date_from
+        and not end_date_to
+    ):
+        return [
+            {
+                "error": "No date filters provided. Please provide at least one date filter."
+            }
+        ]
+    fields = [
+        "user",
+        "updated_at",
+        "sg_status_list",
+        "start_date",
+        "end_date",
+        "project",
+    ]
+    resp = await SG.post_request(
+        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
 
 @mcp.tool()
 async def get_entities_updated_in_last_n_days(entity_type: str, n: int):
