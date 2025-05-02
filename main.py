@@ -688,8 +688,7 @@ async def get_all_bookings_with_user(user_id: int):
             Each dictionary contains fields such as:
                 - updated_at: The timestamp of the last update to the booking.
                 - project: The project associated with the booking.
-                - cached_display_name: The display name of the booking.
-                - vocation: The vocation associated with the booking.
+                - vacation: Whether the booking is marked as a vacation (boolean or relevant value).
                 - sg_status_list: The status of the booking.
                 - start_date: The start date of the booking.
                 - end_date: The end date of the booking.
@@ -698,8 +697,7 @@ async def get_all_bookings_with_user(user_id: int):
     fields = [
         "updated_at",
         "project",
-        "cached_display_name",
-        "vocation",
+        "vacation",
         "sg_status_list",
         "start_date",
         "end_date",
@@ -725,9 +723,8 @@ async def get_all_bookings_in_project(project_id: int):
                 - user: The user who created the booking.
                 - updated_at: The timestamp of the last update to the booking.
                 - project: The project associated with the booking.
-                - vocation: The vocation associated with the booking.
+                - vacation: Whether the booking is marked as a vacation (boolean or relevant value).
                 - sg_status_list: The status of the booking.
-                - cached_display_name: The display name of the booking.
                 - start_date: The start date of the booking.
                 - end_date: The end date of the booking.
     """
@@ -738,9 +735,39 @@ async def get_all_bookings_in_project(project_id: int):
         "user",
         "updated_at",
         "project",
-        "vocation",
+        "vacation",
         "sg_status_list",
-        "cached_display_name",
+        "start_date",
+        "end_date",
+    ]
+    resp = await SG.post_request(
+        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
+    data = json.dumps(data, ensure_ascii=False)
+    return data
+
+@mcp.tool()
+async def get_all_vacation_bookings():
+    """
+    Retrieve all vacation bookings in ShotGrid.
+
+    Returns:
+        str: A JSON-encoded list of dictionaries, each representing a vacation booking.
+            Each dictionary contains fields such as:
+                - user: The user who created the booking.
+                - updated_at: The timestamp of the last update to the booking.
+                - sg_status_list: The status of the booking.
+                - start_date: The start date of the booking.
+                - end_date: The end date of the booking.
+    """
+    filters = [
+        ["vacation", "is", True],
+    ]
+    fields = [
+        "user",
+        "updated_at",
+        "sg_status_list",
         "start_date",
         "end_date",
     ]
