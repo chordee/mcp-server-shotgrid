@@ -1,16 +1,15 @@
 # MCP Server for Autodesk ShotGrid REST API
 
-This project provides an MCP (Model Context Protocol) server, implemented using [FastMCP](https://github.com/modelcontextprotocol/fastmcp), that enables Large Language Model (LLM) agents to interact programmatically with Autodesk ShotGrid via its REST API. It exposes a set of tools for querying and managing ShotGrid entities such as projects, assets, and tasks. The server supports both HTTP and `transport="stdio"` modes for integration with LLM-based workflows.
+This project provides an MCP (Model Context Protocol) server, implemented using [FastMCP](https://github.com/modelcontextprotocol/fastmcp), that enables Large Language Model (LLM) agents to interact programmatically with Autodesk ShotGrid via its REST API. It exposes a set of tools for querying and managing ShotGrid entities such as projects, assets, tasks, users, notes, and more. The server supports `transport="stdio"` mode for integration with LLM-based workflows.
 
 ## Features
 
 - Connects to Autodesk ShotGrid using OAuth2 authentication.
 - Exposes ShotGrid REST API operations as MCP tools using FastMCP.
-- Query projects, assets, and tasks.
+- Query projects, users, assets, tasks, notes, versions, bookings, and more.
 - Retrieve detailed information about entities.
 - Designed for integration with LLM-based workflows.
 - Modular codebase: `main.py` provides the MCP server and tool definitions, while `shotgrid_rest.py` implements the ShotGrid API wrapper.
-- Includes `test_main.py` for automated testing.
 
 ## Requirements
 
@@ -39,41 +38,24 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 
 ## Available Tools
 
-All tools are asynchronous and exposed via FastMCP.
+All tools are asynchronous and exposed via FastMCP. Arguments in parentheses are required unless marked optional. See `main.py` for full argument and return details.
 
-**Available Tools:**  
-Arguments in parentheses are required.
+- `get_all_projects()`: List all projects.
+- `get_all_users()`: List all users.
+- `get_all_projects_field_contains(value: str, field: str = "name")`: List projects where a field contains a value.
+- `get_all_sequences_in_project(project_id: int (optional), code: str (optional), updated_in_last_n_days: int (optional))`: List sequences in a project, optionally filtered.
+- `get_shots(project_id: int (optional), shot_code: str (optional), sequence_id: int (optional), updated_in_last_n_days: int (optional))`: List shots, with optional filters.
+- `get_assets(project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional))`: List assets, with optional filters.
+- `get_tasks(entity_type: str (optional), entity_id: int (optional), project_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional))`: List tasks, with optional filters.
+- `get_users_name_or_login_contains(name: str (optional), login: str (optional))`: List users whose name or login contains a substring.
+- `get_all_notes_with_version(version_id: int)`: List notes associated with a version.
+- `get_all_replies_with_note_id(note_id: int)`: List replies associated with a note.
+- `get_versions(project_id: int (optional), task_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional))`: List versions, with optional filters.
+- `get_bookings(user_id: int (optional), project_id: int (optional), start_date_from: [YYYY,MM,DD] (optional), start_date_to: [YYYY,MM,DD] (optional), end_date_from: [YYYY,MM,DD] (optional), end_date_to: [YYYY,MM,DD] (optional), vacation: bool (optional))`: List bookings, with optional filters.
+- `get_entities_updated_in_last_n_days(entity_type: str, n: int, project_id: int (optional))`: List entities of a type updated in the last n days.
+- `get_entity_by_id(entity_type: str, entity_id: int)`: Get details for an entity by type and ID.
 
-- `get_all_projects()`
-- `get_all_users()`
-- `get_all_projects_name_contains(name: str)`
-- `get_all_projects_code_contains(code: str)`
-- `get_all_sequences_in_project(project_name: str)`
-- `get_all_shots_in_project(project_name: str)`
-- `get_all_shots_code_contains(shot_code: str)`
-- `get_all_assets_in_project(project_name: str)`
-- `get_all_assets_code_contains(code: str)`
-- `get_all_tasks_in_project(project_id: int)`
-- `get_all_tasks_assigned_to_user(user_id: int)`
-- `get_all_tasks_assigned_to_user_in_project_name(user_id: int, project_name: str)`
-- `get_all_tasks_with_shot(shot_id: int)`
-- `get_all_tasks_with_asset(asset_id: int)`
-- `get_project_by_name(name: str)`
-- `get_asset_by_id(asset_id: int)`
-- `get_user_by_id(user_id: int)`
-- `get_user_by_login(login: str)`
-- `get_users_name_contains(name: str)`
-- `get_users_login_contains(login: str)`
-- `get_all_notes_with_version(version_id: int)`
-- `get_all_replies_with_note_id(note_id: int)`
-- `get_all_versions_with_task(task_id: int)`
-- `get_all_versions_in_project(project_id: int)`
-- `get_all_versions_in_project_updated_in_last_n_days(project_id: int, n: int)`
-- `get_entities_updated_in_last_n_days(entity_type: str, n: int)`
-- `get_entities_updated_in_last_n_days_with_project(entity_type: str, project_id: int, n: int)`
-- `get_entity_by_id(entity_type: str, entity_id: int)`
-
-Some tools dynamically fetch entity fields and exclude certain keys for cleaner output. See `main.py` for full argument and return details.
+**Note:** Argument and return details for each tool are documented in the function docstrings in `main.py`.
 
 ## Example
 
