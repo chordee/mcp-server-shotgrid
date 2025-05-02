@@ -260,27 +260,6 @@ async def get_tasks(
 
 
 @mcp.tool()
-async def get_user_by_login(login: str):
-    """Get detailed information about a user by their login on ShotGrid.
-    Args:
-        login: The login of the user to retrieve.
-    Returns:
-        A dictionary containing the user's details, including login, name, and other relevant fields.
-    """
-    fields = await SG.fetch_entity_fields("HumanUsers")
-    params = {
-        "fields": ",".join(fields),
-        "filter[login]": login,
-    }
-    response = await SG.get_request("/entity/HumanUsers", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
 async def get_users_name_or_login_contains(
     name: Optional[str] = None, login: Optional[str] = None
 ):
