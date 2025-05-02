@@ -1,7 +1,7 @@
 import argparse
 import json
 from mcp.server.fastmcp import FastMCP
-from typing import List, Dict, Any
+from typing import List, Dict, Optional
 
 from shotgrid_rest import ShotGridRest
 from shotgrid_options import GENERAL_FIELDS, EXCLUDE_KEYS, ALL_ENTITY_TYPES
@@ -69,21 +69,28 @@ async def get_all_users():
 
 
 @mcp.tool()
-async def get_all_projects_name_contains(name: str):
+async def get_all_projects_field_contains(
+    value: str,
+    field: str = "name",
+):
     """
-    Retrieve all projects from ShotGrid that contain a specific name.
+    Retrieve all projects from ShotGrid that contain a specific value in the name or code field.
 
     Args:
-        name (str): The name to search for in project names.
+        value (str): The value to search for in the specified field.
+        field (str, optional): The field to search in ("name" or "code"). Defaults to "name".
 
     Returns:
-        List[dict]: A list of dictionaries, each representing a project.
-            Each dictionary includes at least the following fields:
-                - name: The name of the project.
-                - code: The project code.
-                - updated_at: The timestamp of the last update to the project.
+        str: JSON-encoded list of project dictionaries, each with fields:
+            - name
+            - code
+            - updated_at
     """
-    filters = [["name", "contains", name]]
+    if field not in {"name", "code"}:
+        return json.dumps(
+            {"error": "Field must be 'name' or 'code'."}, ensure_ascii=False
+        )
+    filters = [[field, "contains", value]]
     fields = ["name", "code", "updated_at"]
     resp = await SG.post_request(
         "/entity/projects/_search", json={"filters": filters, "fields": fields}
@@ -94,142 +101,121 @@ async def get_all_projects_name_contains(name: str):
 
 
 @mcp.tool()
-async def get_all_projects_code_contains(code: str):
+async def get_all_sequences_in_project(
+    project_id: Optional[int] = None,
+    code: Optional[str] = None,
+    updated_in_last_n_days: Optional[int] = None,
+):
     """
-    Retrieve all projects from ShotGrid that contain a specific code.
+    Retrieve all sequences within a specified project from ShotGrid, optionally filtered by code substring and last updated in n days.
 
     Args:
-        code (str): The code to search for in project codes.
-
-    Returns:
-        List[dict]: A list of dictionaries, each representing a project.
-            Each dictionary includes at least the following fields:
-                - name: The name of the project.
-                - code: The project code.
-                - updated_at: The timestamp of the last update to the project.
-    """
-    filters = [["code", "contains", code]]
-    fields = ["name", "code", "updated_at"]
-    resp = await SG.post_request(
-        "/entity/projects/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_sequences_in_project(project_name: str):
-    """
-    Retrieve all sequences within a specified project from ShotGrid.
-
-    Args:
-        project_name (str): The name of the project for which to retrieve sequences.
+        project_id (int, optional): The ID of the project for which to retrieve sequences.
+        code (str, optional): The substring to search for in sequence codes.
+        updated_in_last_n_days (int, optional): Only include sequences updated in the last n days.
 
     Returns:
         List[dict]: A list of dictionaries, each containing details for a sequence,
             including at least the sequence's name, code, status, and associated project.
     """
+    filters = []
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
+    if code:
+        filters.append(["code", "contains", code])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     fields = ["name", "code", "sg_status_list", "project", "updated_at"]
-    params = {"fields": ",".join(fields), "filter[project.Project.name]": project_name}
-    response = await SG.get_request("/entity/sequences", params=params)
-    data = response.get("data", [])
+    resp = await SG.post_request(
+        "/entity/sequences/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
     return data
 
 
 @mcp.tool()
-async def get_all_shots_in_project(project_name: str):
+async def get_shots(
+    project_id: Optional[int] = None,
+    shot_code: Optional[str] = None,
+    sequence_id: Optional[int] = None,
+    updated_in_last_n_days: Optional[int] = None,
+):
     """
-    Retrieve all shots within a specified project from ShotGrid.
+    Retrieve shots from ShotGrid, filtered by project ID, sequence ID, shot code substring, and/or last updated in n days.
 
     Args:
-        project_name (str): The name of the project for which to retrieve shots.
+        project_id (int, optional): The ID of the project to filter shots.
+        shot_code (str, optional): The substring to search for in shot codes.
+        sequence_id (int, optional): The ID of the sequence to filter shots.
+        updated_in_last_n_days (int, optional): Only include shots updated in the last n days.
 
     Returns:
-        List[dict]: A list of dictionaries, each representing a shot in the project.
-            Each dictionary includes at least the following fields:
-                - code: The shot code.
-                - sg_status_list: The status of the shot.
-                - sg_sequence: The sequence to which the shot belongs.
-                - updated_at: The timestamp of the last update to the shot.
+        str: JSON-encoded list of shot dictionaries, each with fields:
+            - code
+            - sg_status_list
+            - sg_sequence
+            - updated_at
+            - project
     """
-    fields = ["code", "sg_status_list", "sg_sequence", "updated_at"]
-    params = {
-        "fields": ",".join(fields),
-        "filter[project.Project.name]": project_name,
-    }
-    response = await SG.get_request("/entity/shots", params=params)
-    data = response.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
+    filters = []
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
+    if shot_code:
+        filters.append(["code", "contains", shot_code])
+    if sequence_id is not None:
+        filters.append(["sg_sequence.Sequence.id", "is", sequence_id])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    fields = ["code", "sg_status_list", "sg_sequence", "updated_at", "project"]
 
-
-@mcp.tool()
-async def get_all_shots_code_contains(shot_code: str):
-    """
-    Retrieve all shots within a specified project from ShotGrid.
-    Args:
-        shot_code (str): The name of the shot for which to retrieve shots.
-    Returns:
-        List[dict]: A list of dictionaries, each representing a shot in the project.
-            Each dictionary includes at least the following fields:
-                - code: The shot code.
-                - sg_status_list: The status of the shot.
-                - sg_sequence: The sequence to which the shot belongs.
-                - updated_at: The timestamp of the last update to the shot.
-    """
-    filters = [["code", "contains", shot_code]]
-    fields = ["code", "sg_status_list", "sg_sequence", "updated_at"]
-    response = await SG.post_request(
+    resp = await SG.post_request(
         "/entity/shots/_search", json={"filters": filters, "fields": fields}
     )
-    data = response.get("data", [])
+    data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
     return data
 
 
 @mcp.tool()
-async def get_all_assets_in_project(project_name: str):
+async def get_assets(
+    project_name: Optional[str] = None,
+    code: Optional[str] = None,
+    updated_in_last_n_days: Optional[int] = None,
+):
     """
-    Retrieve all assets within a specified project on ShotGrid.
+    Retrieve assets from ShotGrid, filtered by project name, code substring, and/or last updated in n days.
 
     Args:
-        project_name (str): The name of the project to search for assets.
+        project_name (str, optional): The name of the project to filter assets.
+        code (str, optional): The substring to search for in asset codes.
+        updated_in_last_n_days (int, optional): Only include assets updated in the last n days.
 
     Returns:
-        List[dict]: A list of dictionaries, each containing details for an asset,
-            including at least the asset's name, code, status, last update time, and asset type.
+        str: JSON-encoded list of asset dictionaries, each with fields:
+            - name
+            - code
+            - sg_status_list
+            - updated_at
+            - sg_asset_type
+            - project
     """
-    fields = ["name", "code", "sg_status_list", "updated_at", "sg_asset_type"]
-    params = {
-        "fields": ",".join(fields),
-        "filter[project.Project.name]": project_name,
-    }
-    response = await SG.get_request("/entity/assets", params=params)
-    data = response.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
+    filters = []
+    if project_name:
+        filters.append(["project.Project.name", "is", project_name])
+    if code:
+        filters.append(["code", "contains", code])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    fields = [
+        "name",
+        "code",
+        "sg_status_list",
+        "updated_at",
+        "sg_asset_type",
+        "project",
+    ]
 
-
-@mcp.tool()
-async def get_all_assets_code_contains(code: str):
-    """
-    Retrieve all assets from ShotGrid whose code(name) contains a specific substring.
-
-    Args:
-        code (str): The substring to search for within asset codes.
-
-    Returns:
-        List[dict]: A list of dictionaries, each representing an asset.
-            Each dictionary includes at least the following fields:
-                - name: The name of the asset.
-                - code: The asset code(name).
-                - updated_at: The timestamp of the last update to the asset.
-                - project: The project to which the asset belongs.
-    """
-    filters = [["code", "contains", code]]
-    fields = ["name", "code", "updated_at", "project"]
     resp = await SG.post_request(
         "/entity/assets/_search", json={"filters": filters, "fields": fields}
     )
@@ -239,109 +225,47 @@ async def get_all_assets_code_contains(code: str):
 
 
 @mcp.tool()
-async def get_all_tasks_in_project(project_id: int):
-    """
-    Retrieve all tasks within a specified project in ShotGrid.
-
-    Args:
-        project_id (int): The unique ID of the project for which to retrieve tasks.
-
-    Returns:
-        List[dict]: A list of dictionaries, each containing details for a task,
-            including at least the task's name (content), status, ID, last update time, and project.
-    """
-    filters = [["project.Project.id", "is", project_id]]
-    fields = [
-        "content",
-        "sg_status_list",
-        "id",
-        "updated_at",
-        "project",
-        "task_assignees",
-    ]
-    resp = await SG.post_request(
-        "/entity/tasks/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_tasks_assigned_to_user(user_id: int):
-    """
-    Retrieve all tasks assigned to a specific user in ShotGrid.
-
-    Args:
-        user_id (int): The unique ID of the user whose tasks should be retrieved.
-
-    Returns:
-        List[dict]: A list of dictionaries, each containing details for a task,
-            including at least the task's name (content), status, ID, last update time, and project.
-    """
-    filters = [["task_assignees", "is", {"type": "HumanUser", "id": user_id}]]
-    fields = [
-        "content",
-        "sg_status_list",
-        "id",
-        "updated_at",
-        "project",
-        "task_assignees",
-    ]
-    resp = await SG.post_request(
-        "/entity/tasks/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_tasks_assigned_to_user_in_project_name(
-    user_id: int, project_name: str
+async def get_tasks(
+    entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    updated_in_last_n_days: Optional[int] = None,
 ):
     """
-    Retrieve all tasks assigned to a specific user in a specific project in ShotGrid.
+    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, and/or last updated in n days.
+
     Args:
-        user_id (int): The unique ID of the user whose tasks should be retrieved.
-        project_name (str): The name of the project whose tasks should be retrieved.
+        entity_type (str, optional): The type of entity ("Shot" or "Asset").
+        entity_id (int, optional): The unique ID of the entity whose tasks should be retrieved.
+        project_id (int, optional): The unique ID of the project to filter tasks.
+        user_id (int, optional): The unique ID of the user to filter assigned tasks.
+        updated_in_last_n_days (int, optional): Only include tasks updated in the last n days.
+
     Returns:
-        List[dict]: A list of dictionaries, each containing details for a task,
-            including at least the task's name (content), status, ID, last update time, and project.
+        str: JSON-encoded list of task dictionaries, each with fields:
+            - content
+            - sg_status_list
+            - id
+            - updated_at
+            - project
+            - task_assignees
+            - cached_display_name
+            - step
     """
-    filters = [
-        ["task_assignees", "is", {"type": "HumanUser", "id": user_id}],
-        ["project.Project.name", "is", project_name],
-    ]
-
-    fields = [
-        "content",
-        "sg_status_list",
-        "id",
-        "updated_at",
-        "project",
-        "task_assignees",
-    ]
-    resp = await SG.post_request(
-        "/entity/tasks/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_tasks_with_shot(shot_id: int):
-    """
-    Retrieve all tasks associated with a specific shot in ShotGrid.
-    Args:
-        shot_id (int): The unique ID of the shot whose tasks should be retrieved.
-    Returns:
-        List[dict]: A list of dictionaries, each containing details for a task,
-            including at least the task's name (content), status, ID, last update time, project,
-            task assignees, cached display name, and step.
-    """
-    filters = [["entity", "is", {"type": "Shot", "id": shot_id}]]
+    filters = []
+    if entity_type and entity_id:
+        if entity_type not in {"Shot", "Asset"}:
+            return json.dumps(
+                {"error": "entity_type must be 'Shot' or 'Asset'."}, ensure_ascii=False
+            )
+        filters.append(["entity", "is", {"type": entity_type, "id": entity_id}])
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
+    if user_id is not None:
+        filters.append(["task_assignees", "is", {"type": "HumanUser", "id": user_id}])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     fields = [
         "content",
         "sg_status_list",
@@ -361,155 +285,29 @@ async def get_all_tasks_with_shot(shot_id: int):
 
 
 @mcp.tool()
-async def get_all_tasks_with_asset(asset_id: int):
+async def get_users_name_or_login_contains(
+    name: Optional[str] = None, login: Optional[str] = None
+):
     """
-    Retrieve all tasks associated with a specific asset in ShotGrid.
-    Args:
-        asset_id (int): The unique ID of the asset whose tasks should be retrieved.
-    Returns:
-        List[dict]: A list of dictionaries, each containing details for a task,
-            including at least the task's name (content), status, ID, last update time, project,
-            task assignees, cached display name, and step.
-    """
-    filters = [["entity", "is", {"type": "Asset", "id": asset_id}]]
-    fields = [
-        "content",
-        "sg_status_list",
-        "id",
-        "updated_at",
-        "project",
-        "task_assignees",
-        "cached_display_name",
-        "step",
-    ]
-    resp = await SG.post_request(
-        "/entity/tasks/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_project_by_name(name: str):
-    """Retrieve project details on ShotGrid based on name.
+    Get detailed information about users whose names or logins contain a specific substring on ShotGrid.
 
     Args:
-        name: Project name
+        name (str, optional): The substring to search for in user names.
+        login (str, optional): The substring to search for in user logins.
 
-    Returns:
-        A dictionary containing the project's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    fields = await SG.fetch_entity_fields("projects")
-    params = {
-        "fields": ",".join(fields),
-        "filter[name]": name,
-    }
-    response = await SG.get_request("/entity/projects", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_asset_by_id(asset_id: int):
-    """Get detailed information about an asset by its ID on ShotGrid.
-
-    Args:
-        asset_id: The ID of the asset to retrieve.
-
-    Returns:
-        A dictionary containing the asset's details, including name, status, type,
-        and other relevant fields as specified in the documentation.
-    """
-    fields = await SG.fetch_entity_fields("assets")
-    params = {
-        "fields": ",".join(
-            [field for field in fields if not field.startswith("step_")]
-        ),
-        "filter[id]": asset_id,
-    }
-    response = await SG.get_request("/entity/assets", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_user_by_id(user_id: int):
-    """Get detailed information about a user by their ID on ShotGrid.
-
-    Args:
-        user_id: The ID of the user to retrieve.
-
-    Returns:
-        A dictionary containing the user's details, including login, name, and other relevant fields.
-    """
-    fields = await SG.fetch_entity_fields("HumanUsers")
-    params = {"fields": ",".join(fields), "filter[id]": user_id}
-    response = await SG.get_request("/entity/HumanUsers", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_user_by_login(login: str):
-    """Get detailed information about a user by their login on ShotGrid.
-    Args:
-        login: The login of the user to retrieve.
-    Returns:
-        A dictionary containing the user's details, including login, name, and other relevant fields.
-    """
-    fields = await SG.fetch_entity_fields("HumanUsers")
-    params = {
-        "fields": ",".join(fields),
-        "filter[login]": login,
-    }
-    response = await SG.get_request("/entity/HumanUsers", params=params)
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_users_name_contains(name: str):
-    """Get detailed information about users whose names contain a specific substring on ShotGrid.
-    Args:
-        name: The substring to search for in user names.
     Returns:
         A list of dictionaries, each containing the user's details, including login, name, and other relevant fields.
     """
-    filters = [["name", "contains", name]]
-    fields = ["login", "name"]
-    response = await SG.post_request(
-        "/entity/HumanUsers/_search", json={"filters": filters, "fields": fields}
-    )
-    data = response.get("data", [])
-    if data:
-        data = [remove_exclude_fields(d) for d in data]
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_users_login_contains(login: str):
-    """Get detailed information about users whose logins contain a specific substring on ShotGrid.
-    Args:
-        login: The substring to search for in user logins.
-    Returns:
-        A list of dictionaries, each containing the user's details, including login, name, and other relevant fields.
-    """
-    filters = [["login", "contains", login]]
+    filters = []
+    if name:
+        filters.append(["name", "contains", name])
+    if login:
+        filters.append(["login", "contains", login])
+    if not filters:
+        return json.dumps(
+            {"error": "At least one of 'name' or 'login' must be provided."},
+            ensure_ascii=False,
+        )
     fields = ["login", "name"]
     response = await SG.post_request(
         "/entity/HumanUsers/_search", json={"filters": filters, "fields": fields}
@@ -566,185 +364,51 @@ async def get_all_replies_with_note_id(note_id: int):
 
 
 @mcp.tool()
-async def get_all_versions_with_task(task_id: int):
-    """
-    Retrieve all version entities in ShotGrid that are linked to a specific task.
-
-    Args:
-        task_id (int): The ID of the task for which to retrieve associated versions.
-
-    Returns:
-        List[dict]: A list of dictionaries, each representing a version associated with the given task.
-            Each dictionary contains fields such as:
-                - user: The user who created the version.
-                - updated_at: The timestamp of the last update to the version.
-                - code: The version's code or name.
-                - sg_path_to_movie: Path to the version's movie file, if available.
-                - sg_path_to_frames: Path to the version's frames, if available.
-                - description: The description of the version, if provided.
-                - sg_status_list: The status of the version (e.g., "wip", "fin", etc.).
-    """
-    fields = [
-        "user",
-        "updated_at",
-        "code",
-        "sg_path_to_movie",
-        "sg_path_to_frames",
-        "description",
-        "sg_status_list",
-    ]
-    params = {
-        "fields": ",".join(fields),
-        "filter[sg_task.Task.id]": task_id,
-    }
-    response = await SG.get_request("/entity/versions", params=params)
-    data = response.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_versions_in_project(project_id: int):
-    """
-    Retrieve all version entities in ShotGrid that are linked to a specific project.
-
-    Args:
-        project_id (int): The ID of the project for which to retrieve associated versions.
-
-    Returns:
-        List[dict]: A list of dictionaries, each representing a version associated with the given project.
-            Each dictionary contains fields such as:
-                - user: The user who created the version.
-                - updated_at: The timestamp of the last update to the version.
-                - code: The version's code or name.
-                - sg_path_to_movie: Path to the version's movie file, if available.
-                - sg_path_to_frames: Path to the version's frames, if available.
-                - description: The description of the version, if provided.
-                - sg_status_list: The status of the version (e.g., "wip", "fin", etc.).
-    """
-    filters = [["project.Project.id", "is", project_id]]
-    fields = [
-        "user",
-        "updated_at",
-        "code",
-        "sg_path_to_movie",
-        "sg_path_to_frames",
-        "description",
-        "sg_status_list",
-    ]
-    resp = await SG.post_request(
-        "/entity/versions/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_versions_in_project_updated_in_last_n_days(project_id: int, n: int):
-    """
-    Retrieve all versions in a specific project that have been updated within the last n days.
-
-    Args:
-        project_id (int): The ID of the project to filter versions by.
-        n (int): The number of days to look back for recently updated versions.
-
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries, each representing a version associated with the given project.
-            Each dictionary contains fields such as user, updated_at, code, sg_path_to_movie,
-            sg_path_to_frames, description, and sg_status_list.
-    """
-    filters = [
-        ["updated_at", "in_last", [n, "DAY"]],
-        ["project.Project.id", "is", project_id],
-    ]
-    fields = [
-        "user",
-        "updated_at",
-        "code",
-        "sg_path_to_movie",
-        "sg_path_to_frames",
-        "description",
-        "sg_status_list",
-    ]
-    resp = await SG.post_request(
-        "/entity/versions/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_bookings_with_user(
-    user_id: int,
-    start_date_from: List[int] = None,
-    start_date_to: List[int] = None,
-    end_date_from: List[int] = None,
-    end_date_to: List[int] = None,
+async def get_versions(
+    project_id: Optional[int] = None,
+    task_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    updated_in_last_n_days: Optional[int] = None,
 ):
     """
-    Retrieve all bookings for a specific user in ShotGrid, with optional date filters.
+    Retrieve versions from ShotGrid, filtered by project, task, user, and/or updated in last n days.
 
     Args:
-        user_id (int): The user ID.
-        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
-        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
-        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
-        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
+        project_id (int, optional): The ID of the project to filter versions.
+        task_id (int, optional): The ID of the task to filter versions.
+        user_id (int, optional): The ID of the user to filter versions.
+        updated_in_last_n_days (int, optional): Only include versions updated in the last n days.
 
     Returns:
-        str: JSON-encoded list of booking dictionaries, each with fields like:
+        str: JSON-encoded list of version dictionaries, each with fields:
+            - user
             - updated_at
-            - project
-            - vacation (True if this booking is a vacation)
+            - code
+            - sg_path_to_movie
+            - sg_path_to_frames
+            - description
             - sg_status_list
-            - start_date
-            - end_date
     """
-    filters = [["user.HumanUser.id", "is", user_id]]
-    if start_date_from:
-        filters.append(
-            [
-                "start_date",
-                "greater_than",
-                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
-            ]
-        )
-    if start_date_to:
-        filters.append(
-            [
-                "start_date",
-                "less_than",
-                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
-            ]
-        )
-    if end_date_from:
-        filters.append(
-            [
-                "end_date",
-                "greater_than",
-                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
-            ]
-        )
-    if end_date_to:
-        filters.append(
-            [
-                "end_date",
-                "less_than",
-                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
-            ]
-        )
+    filters = []
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
+    if task_id is not None:
+        filters.append(["sg_task.Task.id", "is", task_id])
+    if user_id is not None:
+        filters.append(["user.HumanUser.id", "is", user_id])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     fields = [
+        "user",
         "updated_at",
-        "project",
-        "vacation",
+        "code",
+        "sg_path_to_movie",
+        "sg_path_to_frames",
+        "description",
         "sg_status_list",
-        "start_date",
-        "end_date",
     ]
     resp = await SG.post_request(
-        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
+        "/entity/versions/_search", json={"filters": filters, "fields": fields}
     )
     data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
@@ -752,22 +416,26 @@ async def get_all_bookings_with_user(
 
 
 @mcp.tool()
-async def get_all_bookings_in_project(
-    project_id: int,
-    start_date_from: List[int] = None,
-    start_date_to: List[int] = None,
-    end_date_from: List[int] = None,
-    end_date_to: List[int] = None,
+async def get_bookings(
+    user_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    start_date_from: Optional[List[int]] = None,
+    start_date_to: Optional[List[int]] = None,
+    end_date_from: Optional[List[int]] = None,
+    end_date_to: Optional[List[int]] = None,
+    vacation: Optional[bool] = None,
 ):
     """
-    Get all bookings in a specific project, with optional date filters.
+    Retrieve bookings in ShotGrid, filtered by user, project, date, and optionally vacation status.
 
     Args:
-        project_id (int): Project ID.
+        user_id (int, optional): Only include bookings for this user.
+        project_id (int, optional): Only include bookings for this project.
         start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
         start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
         end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
         end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
+        vacation (bool, optional): If True, only include vacation bookings; if False, exclude vacation bookings.
 
     Returns:
         str: JSON-encoded list of booking dictionaries, each with fields like:
@@ -779,9 +447,13 @@ async def get_all_bookings_in_project(
             - start_date
             - end_date
     """
-    filters = [
-        ["project.Project.id", "is", project_id],
-    ]
+    filters = []
+    if vacation is not None:
+        filters.append(["vacation", "is", vacation])
+    if user_id is not None:
+        filters.append(["user.HumanUser.id", "is", user_id])
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
     if start_date_from:
         filters.append(
             [
@@ -832,209 +504,26 @@ async def get_all_bookings_in_project(
 
 
 @mcp.tool()
-async def get_all_vacation_bookings(
-    start_date_from: List[int] = None,
-    start_date_to: List[int] = None,
-    end_date_from: List[int] = None,
-    end_date_to: List[int] = None,
+async def get_entities_updated_in_last_n_days(
+    entity_type: str,
+    n: int,
+    project_id: Optional[int] = None,
 ):
     """
-    Retrieve all vacation bookings in ShotGrid, with optional date filters.
-
-    Args:
-        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
-        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
-        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
-        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
-
-    Returns:
-        str: A JSON-encoded list of dictionaries, each representing a vacation booking.
-            Each dictionary contains fields such as:
-                - user: The user who created the booking.
-                - updated_at: The timestamp of the last update to the booking.
-                - sg_status_list: The status of the booking.
-                - start_date: The start date of the booking.
-                - end_date: The end date of the booking.
-    """
-    filters = [
-        ["vacation", "is", True],
-    ]
-    if start_date_from:
-        filters.append(
-            [
-                "start_date",
-                "greater_than",
-                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
-            ]
-        )
-    if start_date_to:
-        filters.append(
-            [
-                "start_date",
-                "less_than",
-                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
-            ]
-        )
-    if end_date_from:
-        filters.append(
-            [
-                "end_date",
-                "greater_than",
-                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
-            ]
-        )
-    if end_date_to:
-        filters.append(
-            [
-                "end_date",
-                "less_than",
-                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
-            ]
-        )
-    fields = [
-        "user",
-        "updated_at",
-        "sg_status_list",
-        "start_date",
-        "end_date",
-    ]
-    resp = await SG.post_request(
-        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_all_bookings_in_date_range(
-    start_date_from: List[int] = None,
-    start_date_to: List[int] = None,
-    end_date_from: List[int] = None,
-    end_date_to: List[int] = None,
-):
-    """
-    Retrieve all bookings in ShotGrid, with optional date filters.
-
-    Args:
-        start_date_from (List[int], optional): Only include bookings starting after this date [YYYY, MM, DD].
-        start_date_to (List[int], optional): Only include bookings starting before this date [YYYY, MM, DD].
-        end_date_from (List[int], optional): Only include bookings ending after this date [YYYY, MM, DD].
-        end_date_to (List[int], optional): Only include bookings ending before this date [YYYY, MM, DD].
-
-    Returns:
-        str: A JSON-encoded list of dictionaries, each representing a booking.
-            Each dictionary contains fields such as:
-                - user: The user who created the booking.
-                - updated_at: The timestamp of the last update to the booking.
-                - sg_status_list: The status of the booking.
-                - start_date: The start date of the booking.
-                - end_date: The end date of the booking.
-                - project: The project associated with the booking.
-    """
-    filters = []
-    if start_date_from:
-        filters.append(
-            [
-                "start_date",
-                "greater_than",
-                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
-            ]
-        )
-    if start_date_to:
-        filters.append(
-            [
-                "start_date",
-                "less_than",
-                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
-            ]
-        )
-    if end_date_from:
-        filters.append(
-            [
-                "end_date",
-                "greater_than",
-                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
-            ]
-        )
-    if end_date_to:
-        filters.append(
-            [
-                "end_date",
-                "less_than",
-                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
-            ]
-        )
-    if (
-        not start_date_from
-        and not start_date_to
-        and not end_date_from
-        and not end_date_to
-    ):
-        return [
-            {
-                "error": "No date filters provided. Please provide at least one date filter."
-            }
-        ]
-    fields = [
-        "user",
-        "updated_at",
-        "sg_status_list",
-        "start_date",
-        "end_date",
-        "project",
-    ]
-    resp = await SG.post_request(
-        "/entity/bookings/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_entities_updated_in_last_n_days(entity_type: str, n: int):
-    """
-    Retrieve entities of a specified type that have been updated within the last n days.
+    Retrieve entities of a specified type that have been updated within the last n days,
+    optionally filtered by project.
 
     Args:
         entity_type (str): The type of entity to retrieve (e.g., "projects", "shots", "assets").
         n (int): The number of days to look back for recently updated entities.
+        project_id (int, optional): The unique ID of the project to filter entities by.
 
     Returns:
-        List[Dict[str, Any]]:  A dictionary containing the entity's details, including fields such as name, status, type, id
-            and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
+        str: JSON-encoded list of entity dictionaries, each with fields as defined in the ShotGrid schema.
     """
     filters = [["updated_at", "in_last", [n, "DAY"]]]
-    fields = GENERAL_FIELDS
-    resp = await SG.post_request(
-        f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
-    )
-    data = resp.get("data", [])
-    data = json.dumps(data, ensure_ascii=False)
-    return data
-
-
-@mcp.tool()
-async def get_entities_updated_in_last_n_days_with_project(
-    entity_type: str, project_id: int, n: int
-):
-    """
-    Retrieve entities of a specified type that have been updated within the last n days and belong to a specific project.
-
-    Args:
-        entity_type (str): The type of entity to retrieve (e.g., "projects", "shots", "assets").
-        project_id (int): The unique ID of the project to filter entities by.
-        n (int): The number of days to look back for recently updated entities.
-
-    Returns:
-        List[Dict[str, Any]]: A dictionary containing the entity's details, including fields such as name, status, type, id
-            and other relevant attributes as defined in the ShotGrid schema for the specified entity type.
-    """
-    filters = [
-        ["updated_at", "in_last", [n, "DAY"]],
-        ["project", "is", {"type": "Project", "id": project_id}],
-    ]
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
     fields = GENERAL_FIELDS
     resp = await SG.post_request(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}
