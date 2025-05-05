@@ -101,18 +101,22 @@ async def get_all_projects_field_contains(
 
 
 @mcp.tool()
-async def get_all_sequences_in_project(
+async def get_sequences(
     project_id: Optional[int] = None,
     code: Optional[str] = None,
     updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
 ):
     """
-    Retrieve all sequences within a specified project from ShotGrid, optionally filtered by code substring and last updated in n days.
+    Retrieve all sequences within a specified project from ShotGrid, optionally filtered by code substring, last updated in n days, or updated date range.
 
     Args:
         project_id (int, optional): The ID of the project for which to retrieve sequences.
         code (str, optional): The substring to search for in sequence codes.
         updated_in_last_n_days (int, optional): Only include sequences updated in the last n days.
+        updated_date_from (List[int], optional): Only include sequences updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include sequences updated before this date [YYYY, MM, DD].
 
     Returns:
         List[dict]: A list of dictionaries, each containing details for a sequence,
@@ -125,6 +129,18 @@ async def get_all_sequences_in_project(
         filters.append(["code", "contains", code])
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append([
+            "updated_at",
+            "greater_than",
+            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+        ])
+    if updated_date_to:
+        filters.append([
+            "updated_at",
+            "less_than",
+            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+        ])
     fields = ["name", "code", "sg_status_list", "project", "updated_at"]
     resp = await SG.post_request(
         "/entity/sequences/_search", json={"filters": filters, "fields": fields}
@@ -140,15 +156,19 @@ async def get_shots(
     shot_code: Optional[str] = None,
     sequence_id: Optional[int] = None,
     updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
 ):
     """
-    Retrieve shots from ShotGrid, filtered by project ID, sequence ID, shot code substring, and/or last updated in n days.
+    Retrieve shots from ShotGrid, filtered by project ID, sequence ID, shot code substring, last updated in n days, and/or updated date range.
 
     Args:
         project_id (int, optional): The ID of the project to filter shots.
         shot_code (str, optional): The substring to search for in shot codes.
         sequence_id (int, optional): The ID of the sequence to filter shots.
         updated_in_last_n_days (int, optional): Only include shots updated in the last n days.
+        updated_date_from (List[int], optional): Only include shots updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include shots updated before this date [YYYY, MM, DD].
 
     Returns:
         str: JSON-encoded list of shot dictionaries, each with fields:
@@ -167,6 +187,18 @@ async def get_shots(
         filters.append(["sg_sequence.Sequence.id", "is", sequence_id])
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append([
+            "updated_at",
+            "greater_than",
+            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+        ])
+    if updated_date_to:
+        filters.append([
+            "updated_at",
+            "less_than",
+            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+        ])
     fields = ["code", "sg_status_list", "sg_sequence", "updated_at", "project"]
 
     resp = await SG.post_request(
@@ -182,14 +214,18 @@ async def get_assets(
     project_name: Optional[str] = None,
     code: Optional[str] = None,
     updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
 ):
     """
-    Retrieve assets from ShotGrid, filtered by project name, code substring, and/or last updated in n days.
+    Retrieve assets from ShotGrid, filtered by project name, code substring, last updated in n days, and/or updated date range.
 
     Args:
         project_name (str, optional): The name of the project to filter assets.
         code (str, optional): The substring to search for in asset codes.
         updated_in_last_n_days (int, optional): Only include assets updated in the last n days.
+        updated_date_from (List[int], optional): Only include assets updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include assets updated before this date [YYYY, MM, DD].
 
     Returns:
         str: JSON-encoded list of asset dictionaries, each with fields:
@@ -207,6 +243,18 @@ async def get_assets(
         filters.append(["code", "contains", code])
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append([
+            "updated_at",
+            "greater_than",
+            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+        ])
+    if updated_date_to:
+        filters.append([
+            "updated_at",
+            "less_than",
+            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+        ])
     fields = [
         "name",
         "code",
@@ -231,9 +279,11 @@ async def get_tasks(
     project_id: Optional[int] = None,
     user_id: Optional[int] = None,
     updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
 ):
     """
-    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, and/or last updated in n days.
+    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, last updated in n days, and/or updated date range.
 
     Args:
         entity_type (str, optional): The type of entity ("Shot" or "Asset").
@@ -241,6 +291,8 @@ async def get_tasks(
         project_id (int, optional): The unique ID of the project to filter tasks.
         user_id (int, optional): The unique ID of the user to filter assigned tasks.
         updated_in_last_n_days (int, optional): Only include tasks updated in the last n days.
+        updated_date_from (List[int], optional): Only include tasks updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include tasks updated before this date [YYYY, MM, DD].
 
     Returns:
         str: JSON-encoded list of task dictionaries, each with fields:
@@ -266,6 +318,18 @@ async def get_tasks(
         filters.append(["task_assignees", "is", {"type": "HumanUser", "id": user_id}])
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append([
+            "updated_at",
+            "greater_than",
+            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+        ])
+    if updated_date_to:
+        filters.append([
+            "updated_at",
+            "less_than",
+            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+        ])
     fields = [
         "content",
         "sg_status_list",
@@ -369,15 +433,19 @@ async def get_versions(
     task_id: Optional[int] = None,
     user_id: Optional[int] = None,
     updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
 ):
     """
-    Retrieve versions from ShotGrid, filtered by project, task, user, and/or updated in last n days.
+    Retrieve versions from ShotGrid, filtered by project, task, user, updated in last n days, and/or updated date range.
 
     Args:
         project_id (int, optional): The ID of the project to filter versions.
         task_id (int, optional): The ID of the task to filter versions.
         user_id (int, optional): The ID of the user to filter versions.
         updated_in_last_n_days (int, optional): Only include versions updated in the last n days.
+        updated_date_from (List[int], optional): Only include versions updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include versions updated before this date [YYYY, MM, DD].
 
     Returns:
         str: JSON-encoded list of version dictionaries, each with fields:
@@ -398,6 +466,18 @@ async def get_versions(
         filters.append(["user.HumanUser.id", "is", user_id])
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append([
+            "updated_at",
+            "greater_than",
+            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+        ])
+    if updated_date_to:
+        filters.append([
+            "updated_at",
+            "less_than",
+            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+        ])
     fields = [
         "user",
         "updated_at",
