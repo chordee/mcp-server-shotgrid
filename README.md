@@ -43,14 +43,14 @@ All tools are asynchronous and exposed via FastMCP. Arguments in parentheses are
 - `get_all_projects()`: List all projects.
 - `get_all_users()`: List all users.
 - `get_all_projects_field_contains(value: str, field: str = "name")`: List projects where a field contains a value.
-- `get_all_sequences_in_project(project_id: int (optional), code: str (optional), updated_in_last_n_days: int (optional))`: List sequences in a project, optionally filtered.
-- `get_shots(project_id: int (optional), shot_code: str (optional), sequence_id: int (optional), updated_in_last_n_days: int (optional))`: List shots, with optional filters.
-- `get_assets(project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional))`: List assets, with optional filters.
-- `get_tasks(entity_type: str (optional), entity_id: int (optional), project_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional))`: List tasks, with optional filters.
+- `get_sequences(project_id: int (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List sequences in a project, optionally filtered by code, updated date, or date range.
+- `get_shots(project_id: int (optional), shot_code: str (optional), sequence_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List shots, with optional filters.
+- `get_assets(project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List assets, with optional filters.
+- `get_tasks(entity_type: str (optional), entity_id: int (optional), project_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List tasks, with optional filters.
 - `get_users_name_or_login_contains(name: str (optional), login: str (optional))`: List users whose name or login contains a substring.
 - `get_all_notes_with_version(version_id: int)`: List notes associated with a version.
 - `get_all_replies_with_note_id(note_id: int)`: List replies associated with a note.
-- `get_versions(project_id: int (optional), task_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional))`: List versions, with optional filters.
+- `get_versions(project_id: int (optional), task_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List versions, with optional filters.
 - `get_bookings(user_id: int (optional), project_id: int (optional), start_date_from: [YYYY,MM,DD] (optional), start_date_to: [YYYY,MM,DD] (optional), end_date_from: [YYYY,MM,DD] (optional), end_date_to: [YYYY,MM,DD] (optional), vacation: bool (optional))`: List bookings, with optional filters.
 - `get_entities_updated_in_last_n_days(entity_type: str, n: int, project_id: int (optional))`: List entities of a type updated in the last n days.
 - `get_entity_by_id(entity_type: str, entity_id: int)`: Get details for an entity by type and ID.
