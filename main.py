@@ -130,17 +130,21 @@ async def get_sequences(
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     if updated_date_from:
-        filters.append([
-            "updated_at",
-            "greater_than",
-            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
     if updated_date_to:
-        filters.append([
-            "updated_at",
-            "less_than",
-            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
     fields = ["name", "code", "sg_status_list", "project", "updated_at"]
     resp = await SG.post_request(
         "/entity/sequences/_search", json={"filters": filters, "fields": fields}
@@ -188,17 +192,21 @@ async def get_shots(
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     if updated_date_from:
-        filters.append([
-            "updated_at",
-            "greater_than",
-            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
     if updated_date_to:
-        filters.append([
-            "updated_at",
-            "less_than",
-            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
     fields = ["code", "sg_status_list", "sg_sequence", "updated_at", "project"]
 
     resp = await SG.post_request(
@@ -244,17 +252,21 @@ async def get_assets(
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     if updated_date_from:
-        filters.append([
-            "updated_at",
-            "greater_than",
-            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
     if updated_date_to:
-        filters.append([
-            "updated_at",
-            "less_than",
-            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
     fields = [
         "name",
         "code",
@@ -319,17 +331,21 @@ async def get_tasks(
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     if updated_date_from:
-        filters.append([
-            "updated_at",
-            "greater_than",
-            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
     if updated_date_to:
-        filters.append([
-            "updated_at",
-            "less_than",
-            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
     fields = [
         "content",
         "sg_status_list",
@@ -384,25 +400,85 @@ async def get_users_name_or_login_contains(
 
 
 @mcp.tool()
-async def get_all_notes_with_version(version_id: int):
+async def get_notes(
+    shot_id: Optional[int] = None,
+    asset_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    task_id: Optional[int] = None,
+    version_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    updated_in_last_n_days: Optional[int] = None,
+    updated_date_from: Optional[List[int]] = None,
+    updated_date_to: Optional[List[int]] = None,
+):
     """
-    Retrieve all notes associated with a specific version in ShotGrid.
+    Retrieve all notes associated with a specific entity in ShotGrid, with optional date filters.
 
     Args:
-        version_id (int): The ID of the version for which to retrieve associated notes.
+        shot_id (int, optional): The ID of the shot to filter notes.
+        asset_id (int, optional): The ID of the asset to filter notes.
+        user_id (int, optional): The ID of the user to filter notes.
+        task_id (int, optional): The ID of the task to filter notes.
+        version_id (int, optional): The ID of the version to filter notes.
+        project_id (int, optional): The ID of the project to filter notes.
+        updated_in_last_n_days (int, optional): Only include notes updated in the last n days.
+        updated_date_from (List[int], optional): Only include notes updated after this date [YYYY, MM, DD].
+        updated_date_to (List[int], optional): Only include notes updated before this date [YYYY, MM, DD].
 
     Returns:
-        List[dict]: A list of dictionaries, each representing a note associated with the given version.
-
+        str: JSON-encoded list of note dictionaries, each with fields:
+            - user: The user who created the note.
+            - cached_display_name: The display name of the note.
+            - sg_status_list: The status of the note.
+            - tasks: Associated tasks for the note.
+            - addressings_to: Users addressed in the note.
+            - note_links: Linked entities (e.g., Shot, Asset, Version).
+            - attachments: Any attachments associated with the note.
     """
-    params = {
-        "fields": "notes",
-        "filter[id]": version_id,
-    }
-    response = await SG.get_request("/entity/versions", params=params)
-    data = response.get("data", [])
-    if data:
-        data = data[0].get("relationships", {}).get("notes", {}).get("data", [])
+    filters = []
+    if shot_id:
+        filters.append(["note_links", "is", {"type": "Shot", "id": shot_id}])
+    if asset_id:
+        filters.append(["note_links", "is", {"type": "Asset", "id": asset_id}])
+    if user_id:
+        filters.append(["addressings_to", "is", {"type": "HumanUser", "id": user_id}])
+    if task_id:
+        filters.append(["tasks", "is", {"type": "Task", "id": task_id}])
+    if version_id:
+        filters.append(["note_links", "is", {"type": "Version", "id": version_id}])
+    if project_id:
+        filters.append(["project.Project.id", "is", project_id])
+    if updated_in_last_n_days is not None:
+        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
+    if updated_date_from:
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
+    if updated_date_to:
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
+    fields = [
+        "user",
+        "cached_display_name",
+        "sg_status_list",
+        "tasks",
+        "addressings_to",
+        "note_links",
+        "attachments",
+    ]
+    resp = await SG.post_request(
+        "/entity/notes/_search", json={"filters": filters, "fields": fields}
+    )
+    data = resp.get("data", [])
     data = json.dumps(data, ensure_ascii=False)
     return data
 
@@ -467,17 +543,21 @@ async def get_versions(
     if updated_in_last_n_days is not None:
         filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
     if updated_date_from:
-        filters.append([
-            "updated_at",
-            "greater_than",
-            f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "greater_than",
+                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
+            ]
+        )
     if updated_date_to:
-        filters.append([
-            "updated_at",
-            "less_than",
-            f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-        ])
+        filters.append(
+            [
+                "updated_at",
+                "less_than",
+                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
+            ]
+        )
     fields = [
         "user",
         "updated_at",
