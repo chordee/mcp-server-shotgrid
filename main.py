@@ -293,9 +293,10 @@ async def get_tasks(
     updated_in_last_n_days: Optional[int] = None,
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
+    project_name: Optional[str] = None,
 ):
     """
-    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, last updated in n days, and/or updated date range.
+    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, project name (contains), last updated in n days, and/or updated date range.
 
     Args:
         entity_type (str, optional): The type of entity ("Shot" or "Asset").
@@ -305,6 +306,7 @@ async def get_tasks(
         updated_in_last_n_days (int, optional): Only include tasks updated in the last n days.
         updated_date_from (List[int], optional): Only include tasks updated after this date [YYYY, MM, DD].
         updated_date_to (List[int], optional): Only include tasks updated before this date [YYYY, MM, DD].
+        project_name (str, optional): Filter tasks where the project name contains this value.
 
     Returns:
         str: JSON-encoded list of task dictionaries, each with fields:
@@ -326,6 +328,8 @@ async def get_tasks(
         filters.append(["entity", "is", {"type": entity_type, "id": entity_id}])
     if project_id is not None:
         filters.append(["project.Project.id", "is", project_id])
+    if project_name:
+        filters.append(["project.Project.name", "contains", project_name])
     if user_id is not None:
         filters.append(["task_assignees", "is", {"type": "HumanUser", "id": user_id}])
     if updated_in_last_n_days is not None:
@@ -410,9 +414,13 @@ async def get_notes(
     updated_in_last_n_days: Optional[int] = None,
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
+    project_name: Optional[str] = None,
+    task_name: Optional[str] = None,
+    asset_name: Optional[str] = None,
+    version_name: Optional[str] = None,
 ):
     """
-    Retrieve all notes associated with a specific entity in ShotGrid, with optional date filters.
+    Retrieve all notes associated with a specific entity in ShotGrid, with optional date and content filters.
 
     Args:
         shot_id (int, optional): The ID of the shot to filter notes.
@@ -424,6 +432,10 @@ async def get_notes(
         updated_in_last_n_days (int, optional): Only include notes updated in the last n days.
         updated_date_from (List[int], optional): Only include notes updated after this date [YYYY, MM, DD].
         updated_date_to (List[int], optional): Only include notes updated before this date [YYYY, MM, DD].
+        project_name (str, optional): Filter notes where the project name contains this value.
+        task_name (str, optional): Filter notes where the task content contains this value.
+        asset_name (str, optional): Filter notes where the linked asset code contains this value.
+        version_name (str, optional): Filter notes where the linked version code contains this value.
 
     Returns:
         str: JSON-encoded list of note dictionaries, each with fields:
@@ -466,6 +478,14 @@ async def get_notes(
                 f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
             ]
         )
+    if project_name:
+        filters.append(["project.Project.name", "contains", project_name])
+    if task_name:
+        filters.append(["tasks.Task.content", "contains", task_name])
+    if asset_name:
+        filters.append(["note_links.Asset.code", "contains", asset_name])
+    if version_name:
+        filters.append(["note_links.Version.code", "contains", version_name])
     fields = [
         "user",
         "cached_display_name",
@@ -511,9 +531,11 @@ async def get_versions(
     updated_in_last_n_days: Optional[int] = None,
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
+    project_name: Optional[str] = None,
+    task_name: Optional[str] = None,
 ):
     """
-    Retrieve versions from ShotGrid, filtered by project, task, user, updated in last n days, and/or updated date range.
+    Retrieve versions from ShotGrid, filtered by project, task, user, updated in last n days, project name (contains), task name (contains), and/or updated date range.
 
     Args:
         project_id (int, optional): The ID of the project to filter versions.
@@ -522,6 +544,8 @@ async def get_versions(
         updated_in_last_n_days (int, optional): Only include versions updated in the last n days.
         updated_date_from (List[int], optional): Only include versions updated after this date [YYYY, MM, DD].
         updated_date_to (List[int], optional): Only include versions updated before this date [YYYY, MM, DD].
+        project_name (str, optional): Filter versions where the project name contains this value.
+        task_name (str, optional): Filter versions where the task content contains this value.
 
     Returns:
         str: JSON-encoded list of version dictionaries, each with fields:
@@ -558,6 +582,10 @@ async def get_versions(
                 f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
             ]
         )
+    if project_name:
+        filters.append(["project.Project.name", "contains", project_name])
+    if task_name:
+        filters.append(["sg_task.Task.content", "contains", task_name])
     fields = [
         "user",
         "updated_at",
