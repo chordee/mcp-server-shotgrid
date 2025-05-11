@@ -162,12 +162,16 @@ async def get_shots(
     updated_in_last_n_days: Optional[int] = None,
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
+    project_name: Optional[str] = None,
+    sequence_code: Optional[str] = None,
 ):
     """
-    Retrieve shots from ShotGrid, filtered by project ID, sequence ID, shot code substring, last updated in n days, and/or updated date range.
+    Retrieve shots from ShotGrid, filtered by project ID, project name (contains), sequence ID, sequence code (contains), shot code substring, last updated in n days, and/or updated date range.
 
     Args:
         project_id (int, optional): The ID of the project to filter shots.
+        project_name (str, optional): Filter shots where the project name contains this value.
+        sequence_code (str, optional): Filter shots where the sequence code contains this value.
         shot_code (str, optional): The substring to search for in shot codes.
         sequence_id (int, optional): The ID of the sequence to filter shots.
         updated_in_last_n_days (int, optional): Only include shots updated in the last n days.
@@ -185,6 +189,10 @@ async def get_shots(
     filters = []
     if project_id is not None:
         filters.append(["project.Project.id", "is", project_id])
+    if project_name:
+        filters.append(["project.Project.name", "contains", project_name])
+    if sequence_code:
+        filters.append(["sg_sequence.Sequence.code", "contains", sequence_code])
     if shot_code:
         filters.append(["code", "contains", shot_code])
     if sequence_id is not None:
@@ -224,16 +232,18 @@ async def get_assets(
     updated_in_last_n_days: Optional[int] = None,
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
+    project_id: Optional[int] = None,
 ):
     """
-    Retrieve assets from ShotGrid, filtered by project name, code substring, last updated in n days, and/or updated date range.
+    Retrieve assets from ShotGrid, filtered by project name (contains), project ID, code substring, last updated in n days, and/or updated date range.
 
     Args:
-        project_name (str, optional): The name of the project to filter assets.
+        project_name (str, optional): Filter assets where the project name contains this value.
         code (str, optional): The substring to search for in asset codes.
         updated_in_last_n_days (int, optional): Only include assets updated in the last n days.
         updated_date_from (List[int], optional): Only include assets updated after this date [YYYY, MM, DD].
         updated_date_to (List[int], optional): Only include assets updated before this date [YYYY, MM, DD].
+        project_id (int, optional): Only include assets for this project ID.
 
     Returns:
         str: JSON-encoded list of asset dictionaries, each with fields:
@@ -246,7 +256,9 @@ async def get_assets(
     """
     filters = []
     if project_name:
-        filters.append(["project.Project.name", "is", project_name])
+        filters.append(["project.Project.name", "contains", project_name])
+    if project_id is not None:
+        filters.append(["project.Project.id", "is", project_id])
     if code:
         filters.append(["code", "contains", code])
     if updated_in_last_n_days is not None:
@@ -294,9 +306,10 @@ async def get_tasks(
     updated_date_from: Optional[List[int]] = None,
     updated_date_to: Optional[List[int]] = None,
     project_name: Optional[str] = None,
+    task_name: Optional[str] = None,
 ):
     """
-    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, project name (contains), last updated in n days, and/or updated date range.
+    Retrieve tasks from ShotGrid, filtered by entity (Shot or Asset), project, assigned user, project name (contains), task name (contains), last updated in n days, and/or updated date range.
 
     Args:
         entity_type (str, optional): The type of entity ("Shot" or "Asset").
@@ -307,6 +320,7 @@ async def get_tasks(
         updated_date_from (List[int], optional): Only include tasks updated after this date [YYYY, MM, DD].
         updated_date_to (List[int], optional): Only include tasks updated before this date [YYYY, MM, DD].
         project_name (str, optional): Filter tasks where the project name contains this value.
+        task_name (str, optional): Filter tasks where the content contains this value.
 
     Returns:
         str: JSON-encoded list of task dictionaries, each with fields:
@@ -330,6 +344,8 @@ async def get_tasks(
         filters.append(["project.Project.id", "is", project_id])
     if project_name:
         filters.append(["project.Project.name", "contains", project_name])
+    if task_name:
+        filters.append(["content", "contains", task_name])
     if user_id is not None:
         filters.append(["task_assignees", "is", {"type": "HumanUser", "id": user_id}])
     if updated_in_last_n_days is not None:
@@ -416,7 +432,7 @@ async def get_notes(
     updated_date_to: Optional[List[int]] = None,
     project_name: Optional[str] = None,
     task_name: Optional[str] = None,
-    asset_name: Optional[str] = None,
+    asset_code: Optional[str] = None,
     version_name: Optional[str] = None,
 ):
     """
@@ -434,7 +450,7 @@ async def get_notes(
         updated_date_to (List[int], optional): Only include notes updated before this date [YYYY, MM, DD].
         project_name (str, optional): Filter notes where the project name contains this value.
         task_name (str, optional): Filter notes where the task content contains this value.
-        asset_name (str, optional): Filter notes where the linked asset code contains this value.
+        asset_code (str, optional): Filter notes where the linked asset code contains this value.
         version_name (str, optional): Filter notes where the linked version code contains this value.
 
     Returns:
@@ -482,8 +498,8 @@ async def get_notes(
         filters.append(["project.Project.name", "contains", project_name])
     if task_name:
         filters.append(["tasks.Task.content", "contains", task_name])
-    if asset_name:
-        filters.append(["note_links.Asset.code", "contains", asset_name])
+    if asset_code:
+        filters.append(["note_links.Asset.code", "contains", asset_code])
     if version_name:
         filters.append(["note_links.Version.code", "contains", version_name])
     fields = [
