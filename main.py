@@ -650,6 +650,7 @@ async def get_bookings(
             - sg_status_list
             - start_date
             - end_date
+            - note
     """
     filters = []
     if vacation is not None:
@@ -698,6 +699,7 @@ async def get_bookings(
         "sg_status_list",
         "start_date",
         "end_date",
+        "note"
     ]
     resp = await SG.post_request(
         "/entity/bookings/_search", json={"filters": filters, "fields": fields}
