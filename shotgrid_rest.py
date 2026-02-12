@@ -23,34 +23,36 @@ class ShotGridRest:
         self.client_id = None
         self.client_secret = None
         self.api_host = None
+        self._client: Optional[httpx.AsyncClient] = None
+        self._schema_cache: Dict[str, List[str]] = {}
+
+    def _get_client(self) -> httpx.AsyncClient:
+        """Get or create the shared httpx.AsyncClient instance with no proxies."""
+        if self._client is None or self._client.is_closed:
+            # Set a more generous timeout
+            timeout = httpx.Timeout(60.0, connect=10.0)
+            # Use proxy=None and trust_env=False to bypass system proxies completely
+            # since moonshine.shotgunstudio.com is internal.
+            self._client = httpx.AsyncClient(
+                timeout=timeout, 
+                proxy=None, 
+                trust_env=False
+            )
+        return self._client
+
+    async def close(self):
+        """Close the underlying httpx client."""
+        if self._client:
+            await self._client.aclose()
 
     def set_host(self, host: str, version: str = "1.1") -> None:
-        """
-        Set the ShotGrid API host and version.
-
-        Args:
-            host (str): The base URL of the ShotGrid server (e.g., "https://your-shotgrid-site.com").
-            version (str, optional): The API version to use. Defaults to "1.1".
-
-        Sets:
-            self.host: The base host URL.
-            self.api_host: The full API endpoint including version.
-        """
+        # ... (keep existing implementation)
         self.host = host
         self.api_host = f"{self.host}/api/v{version}"
 
     def access_token(self, client_id: str, client_secret: str) -> None:
         """
         Obtain and set the OAuth2 access token for authenticating with the ShotGrid API.
-
-        Args:
-            client_id (str): The client ID for the ShotGrid API application.
-            client_secret (str): The client secret for the ShotGrid API application.
-
-        Sets:
-            self.auth: The OAuth2 authentication object used for API requests.
-            self.client_id: Stores the provided client ID.
-            self.client_secret: Stores the provided client secret.
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -60,7 +62,8 @@ class ShotGridRest:
             client_id=self.client_id,
             client_secret=self.client_secret,
         )
-        logger.info("Result:", self.auth.state)
+        # Use proper logging syntax
+        logger.info("Auth state initialized: %s", getattr(self.auth, "state", "unknown"))
 
     async def post_request(
         self,
@@ -69,14 +72,7 @@ class ShotGridRest:
         json: Optional[Dict[str, Any]] = None,
     ):
         """
-        Send an asynchronous POST request to the ShotGrid API with OAuth2 authentication.
-
-        Args:
-            path (str): The API endpoint path to append to the base API host URL.
-            json (Optional[Dict[str, Any]]): The JSON payload to include in the POST request body.
-
-        Returns:
-            dict: The JSON-decoded response from the ShotGrid API.
+        Send an asynchronous POST request using the shared client.
         """
         url = f"{self.api_host}{path}"
         headers = {
@@ -86,44 +82,38 @@ class ShotGridRest:
                 else HASH_HEADER["Content-Type"]
             )
         }
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(url, json=json, headers=headers, auth=self.auth)
-            resp.raise_for_status()
-            return resp.json()
+        client = self._get_client()
+        resp = await client.post(url, json=json, headers=headers, auth=self.auth)
+        resp.raise_for_status()
+        return resp.json()
 
     async def get_request(self, path: str, params: Optional[Dict[str, Any]] = None):
         """
-        Send an asynchronous GET request to the ShotGrid API with OAuth2 authentication.
-
-        Args:
-            path (str): The API endpoint path to append to the base API host URL.
-            params (Optional[Dict[str, Any]]): The query parameters to include in the GET request.
-
-        Returns:
-            dict: The JSON-decoded response from the ShotGrid API.
+        Send an asynchronous GET request using the shared client.
         """
         url = f"{self.api_host}{path}"
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url, params=params, auth=self.auth)
-            resp.raise_for_status()
-            return resp.json()
+        client = self._get_client()
+        resp = await client.get(url, params=params, auth=self.auth)
+        resp.raise_for_status()
+        return resp.json()
 
-    async def fetch_entity_fields(self, entity_type):
+    async def fetch_entity_fields(self, entity_type: str) -> List[str]:
         """
-        Fetch all field names for a given ShotGrid entity type.
-
-        Args:
-            entity_type (str): The type of entity (e.g., "projects", "shots", "assets").
-
-        Returns:
-            KeysView: A view of the field names (keys) for the specified entity type.
+        Fetch and cache field names for a given ShotGrid entity type.
         """
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"{self.api_host}/schema/{entity_type}/fields", auth=self.auth
-            )
-            data = resp.json().get("data", [])
-            return data.keys()
+        if entity_type in self._schema_cache:
+            return self._schema_cache[entity_type]
+
+        client = self._get_client()
+        resp = await client.get(
+            f"{self.api_host}/schema/{entity_type}/fields", auth=self.auth
+        )
+        resp.raise_for_status()
+        fields = list(resp.json().get("data", {}).keys())
+        
+        if fields:
+            self._schema_cache[entity_type] = fields
+        return fields
 
 
 @dataclass
