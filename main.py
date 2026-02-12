@@ -721,7 +721,7 @@ async def get_bookings(
 
 @mcp.tool()
 async def get_entities_updated_in_last_n_days(
-    entity_type: str,
+    entity_type: ALL_ENTITY_TYPES,
     n: int,
     project_id: Optional[int] = None,
 ):
@@ -731,15 +731,21 @@ async def get_entities_updated_in_last_n_days(
 
     Args:
         entity_type (str): The type of entity to retrieve (e.g., "projects", "shots", "assets").
+            Use lowercase plural forms as defined in ShotGrid REST API.
         n (int): The number of days to look back for recently updated entities.
-        project_id (int, optional): The unique ID of the project to filter entities by.
+        project_id (int, optional): The unique ID of the project to filter entities by. 
+            Note: This is ignored if entity_type is 'projects'.
 
     Returns:
-        str: JSON-encoded list of entity dictionaries, each with fields as defined in the ShotGrid schema.
+        str: JSON-encoded list of entity dictionaries.
     """
     filters = [["updated_at", "in_last", [n, "DAY"]]]
-    if project_id is not None:
+    
+    # Only apply project filter if the entity type is NOT 'projects'
+    # and NOT 'HumanUsers' (which are global)
+    if project_id is not None and entity_type not in {"projects", "HumanUsers"}:
         filters.append(["project.Project.id", "is", project_id])
+        
     fields = GENERAL_FIELDS
     resp = await SG.post_request(
         f"/entity/{entity_type}/_search", json={"filters": filters, "fields": fields}

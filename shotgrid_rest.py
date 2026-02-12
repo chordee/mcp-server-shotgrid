@@ -44,6 +44,7 @@ class ShotGridRest:
         """Close the underlying httpx client."""
         if self._client:
             await self._client.aclose()
+            self._client = None
 
     def set_host(self, host: str, version: str = "1.1") -> None:
         # ... (keep existing implementation)
