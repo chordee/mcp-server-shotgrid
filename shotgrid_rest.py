@@ -47,8 +47,8 @@ class ShotGridRest:
             self._client = None
 
     def set_host(self, host: str, version: str = "1.1") -> None:
-        # ... (keep existing implementation)
-        self.host = host
+        """Set the ShotGrid host URL and API version."""
+        self.host = host.rstrip("/")
         self.api_host = f"{self.host}/api/v{version}"
 
     def access_token(self, client_id: str, client_secret: str) -> None:
