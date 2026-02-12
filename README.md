@@ -38,25 +38,26 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 
 ## Available Tools
 
-All tools are asynchronous and exposed via FastMCP. Arguments in parentheses are required unless marked optional. See `main.py` for full argument and return details.
+All tools are asynchronous and exposed via FastMCP. They return structured Python objects (List or Dict) which are automatically serialized by the MCP framework. Arguments in parentheses are required unless marked optional.
 
 - `get_all_projects()`: List all projects.
 - `get_all_users()`: List all users.
 - `get_all_projects_field_contains(value: str, field: str = "name")`: List projects where a field contains a value.
-- `get_sequences(project_id: int (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List sequences in a project, optionally filtered by code, updated date, or date range.
-- `get_shots(project_id: int (optional), shot_code: str (optional), sequence_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List shots, with optional filters.
-- `get_assets(project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List assets, with optional filters.
-- `get_tasks(entity_type: str (optional), entity_id: int (optional), project_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional), project_name: str (optional, contains))`: List tasks, with optional filters. `project_name` filters tasks where the project name contains the given value.
+- `get_sequences(project_id: int (optional), project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List sequences, optionally filtered by project, code, or date.
+- `get_shots(project_id: int (optional), project_name: str (optional), sequence_id: int (optional), sequence_code: str (optional), shot_code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List shots, with extensive filters.
+- `get_assets(project_id: int (optional), project_name: str (optional), code: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List assets, with optional filters.
+- `get_tasks(entity_type: str (optional), entity_id: int (optional), project_id: int (optional), project_name: str (optional), user_id: int (optional), task_name: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List tasks, with optional filters.
 - `get_users_name_or_login_contains(name: str (optional), login: str (optional))`: List users whose name or login contains a substring.
-- `get_notes(shot_id: int (optional), asset_id: int (optional), user_id: int (optional), task_id: int (optional), version_id: int (optional), project_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional), project_name: str (optional, contains), task_name: str (optional, contains), asset_name: str (optional, contains), version_name: str (optional, contains))`: List notes, with optional filters. The new arguments filter using "contains" logic on their respective fields.
-- `get_all_notes_with_version(version_id: int)`: List notes associated with a version.
+- `get_notes(shot_id: int (optional), asset_id: int (optional), user_id: int (optional), task_id: int (optional), version_id: int (optional), project_id: int (optional), project_name: str (optional), task_name: str (optional), asset_code: str (optional), version_name: str (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List notes with comprehensive filtering options.
 - `get_all_replies_with_note_id(note_id: int)`: List replies associated with a note.
-- `get_versions(project_id: int (optional), task_id: int (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional), project_name: str (optional, contains), task_name: str (optional, contains))`: List versions, with optional filters. `project_name` and `task_name` filter using "contains" logic on their respective fields.
+- `get_versions(project_id: int (optional), project_name: str (optional), task_id: int (optional), task_name: str (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List versions with optional filters.
 - `get_bookings(user_id: int (optional), project_id: int (optional), start_date_from: [YYYY,MM,DD] (optional), start_date_to: [YYYY,MM,DD] (optional), end_date_from: [YYYY,MM,DD] (optional), end_date_to: [YYYY,MM,DD] (optional), vacation: bool (optional))`: List bookings, with optional filters.
 - `get_entities_updated_in_last_n_days(entity_type: str, n: int, project_id: int (optional))`: List entities of a type updated in the last n days.
 - `get_entity_by_id(entity_type: str, entity_id: int)`: Get details for an entity by type and ID.
 
-**Note:** Argument and return details for each tool are documented in the function docstrings in `main.py`.
+## Error Handling
+
+The server includes a robust error handling wrapper that captures ShotGrid API errors and internal exceptions, returning them as structured JSON objects with `error` and `message` fields.
 
 ## Example
 

@@ -9,3 +9,5 @@ test_*
 
 # Virtual environments
 .venv
+temp_test_updated.py
+tests/
