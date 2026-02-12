@@ -13,12 +13,22 @@ mcp = FastMCP("mcp-server-shotgrid")
 
 
 def remove_exclude_fields(data: Dict) -> Dict:
+    """
+    Remove excluded and pipeline-specific fields from the entity attributes.
+    """
+    attributes = data.get("attributes", {})
+    if not attributes:
+        return data
+        
+    # Remove explicitly excluded keys
     for exclude_key in EXCLUDE_KEYS:
-        if exclude_key in data["attributes"].keys():
-            del data["attributes"][exclude_key]
-    for field in list(data["attributes"].keys()):
-        if field.startswith("step_"):
-            del data["attributes"][field]
+        attributes.pop(exclude_key, None)
+        
+    # Remove step-specific fields (e.g., step_123)
+    keys_to_remove = [k for k in attributes.keys() if k.startswith("step_")]
+    for k in keys_to_remove:
+        attributes.pop(k, None)
+        
     return data
 
 
