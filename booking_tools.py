@@ -1,18 +1,30 @@
+import logging
 import httpx
+from datetime import date
 from typing import List, Dict, Optional, Union, Literal
+
+from shotgrid_rest import ShotGridRest
 
 BOOKING_STATUS = Literal["cfrm", "pndng"]
 
-from shotgrid_rest import ShotGridRest
+logger = logging.getLogger(__name__)
+
+
+def _to_iso_date(parts: List[int], field_name: str) -> str:
+    if len(parts) != 3:
+        raise ValueError(f"{field_name} must be [YYYY, MM, DD].")
+    return date(parts[0], parts[1], parts[2]).isoformat()
 
 
 async def _handle_errors(coro):
     try:
         return await coro
     except httpx.HTTPStatusError as e:
-        return {"error": f"ShotGrid API Error: {e.response.status_code}", "message": e.response.text}
-    except Exception as e:
-        return {"error": "Internal Server Error", "message": str(e)}
+        logger.warning("ShotGrid API error: status=%s", e.response.status_code)
+        return {"error": f"ShotGrid API Error: {e.response.status_code}", "message": "Request to ShotGrid failed."}
+    except Exception:
+        logger.exception("Unhandled booking tool error")
+        return {"error": "Internal Server Error", "message": "Unexpected server error."}
 
 
 def register_booking_tools(mcp, sg: ShotGridRest):
@@ -36,13 +48,13 @@ def register_booking_tools(mcp, sg: ShotGridRest):
         if project_id is not None:
             filters.append(["project.Project.id", "is", project_id])
         if start_date_from:
-            filters.append(["start_date", "greater_than", f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}"])
+            filters.append(["start_date", "greater_than", _to_iso_date(start_date_from, "start_date_from")])
         if start_date_to:
-            filters.append(["start_date", "less_than", f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}"])
+            filters.append(["start_date", "less_than", _to_iso_date(start_date_to, "start_date_to")])
         if end_date_from:
-            filters.append(["end_date", "greater_than", f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}"])
+            filters.append(["end_date", "greater_than", _to_iso_date(end_date_from, "end_date_from")])
         if end_date_to:
-            filters.append(["end_date", "less_than", f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}"])
+            filters.append(["end_date", "less_than", _to_iso_date(end_date_to, "end_date_to")])
         fields = ["user", "updated_at", "project", "vacation", "sg_status_list", "percent_allocation", "start_date", "end_date", "note"]
 
         async def _call():
@@ -74,11 +86,14 @@ def register_booking_tools(mcp, sg: ShotGridRest):
             percent_allocation: Work allocation percentage (0-100, default 100).
             sg_status_list: Status, either "cfrm" (Confirmed) or "pndng" (Pending).
         """
+        if percent_allocation is not None and not (0 <= percent_allocation <= 100):
+            return {"error": "Invalid percent_allocation", "message": "percent_allocation must be between 0 and 100."}
+
         data: Dict = {
             "user": {"type": "HumanUser", "id": user_id},
             "project": {"type": "Project", "id": project_id},
-            "start_date": f"{start_date[0]:04}-{start_date[1]:02}-{start_date[2]:02}",
-            "end_date": f"{end_date[0]:04}-{end_date[1]:02}-{end_date[2]:02}",
+            "start_date": _to_iso_date(start_date, "start_date"),
+            "end_date": _to_iso_date(end_date, "end_date"),
             "vacation": vacation,
         }
         if note is not None:
@@ -115,11 +130,14 @@ def register_booking_tools(mcp, sg: ShotGridRest):
             percent_allocation: Work allocation percentage (0-100), or None to leave unchanged.
             sg_status_list: Status "cfrm" (Confirmed) or "pndng" (Pending), or None to leave unchanged.
         """
+        if percent_allocation is not None and not (0 <= percent_allocation <= 100):
+            return {"error": "Invalid percent_allocation", "message": "percent_allocation must be between 0 and 100."}
+
         data: Dict = {}
         if start_date is not None:
-            data["start_date"] = f"{start_date[0]:04}-{start_date[1]:02}-{start_date[2]:02}"
+            data["start_date"] = _to_iso_date(start_date, "start_date")
         if end_date is not None:
-            data["end_date"] = f"{end_date[0]:04}-{end_date[1]:02}-{end_date[2]:02}"
+            data["end_date"] = _to_iso_date(end_date, "end_date")
         if vacation is not None:
             data["vacation"] = vacation
         if note is not None:
