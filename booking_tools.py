@@ -46,24 +46,24 @@ def register_booking_tools(mcp, sg: ShotGridRest):
         vacation: Optional[bool] = None,
     ) -> Union[List[Dict], Dict]:
         """Retrieve bookings in ShotGrid with various filters."""
-        filters = []
-        if vacation is not None:
-            filters.append(["vacation", "is", vacation])
-        if user_id is not None:
-            filters.append(["user.HumanUser.id", "is", user_id])
-        if project_id is not None:
-            filters.append(["project.Project.id", "is", project_id])
-        if start_date_from is not None:
-            filters.append(["start_date", "greater_than", _to_iso_date(start_date_from, "start_date_from")])
-        if start_date_to is not None:
-            filters.append(["start_date", "less_than", _to_iso_date(start_date_to, "start_date_to")])
-        if end_date_from is not None:
-            filters.append(["end_date", "greater_than", _to_iso_date(end_date_from, "end_date_from")])
-        if end_date_to is not None:
-            filters.append(["end_date", "less_than", _to_iso_date(end_date_to, "end_date_to")])
         fields = ["user", "updated_at", "project", "vacation", "sg_status_list", "percent_allocation", "start_date", "end_date", "note"]
 
         async def _call():
+            filters = []
+            if vacation is not None:
+                filters.append(["vacation", "is", vacation])
+            if user_id is not None:
+                filters.append(["user.HumanUser.id", "is", user_id])
+            if project_id is not None:
+                filters.append(["project.Project.id", "is", project_id])
+            if start_date_from is not None:
+                filters.append(["start_date", "greater_than", _to_iso_date(start_date_from, "start_date_from")])
+            if start_date_to is not None:
+                filters.append(["start_date", "less_than", _to_iso_date(start_date_to, "start_date_to")])
+            if end_date_from is not None:
+                filters.append(["end_date", "greater_than", _to_iso_date(end_date_from, "end_date_from")])
+            if end_date_to is not None:
+                filters.append(["end_date", "less_than", _to_iso_date(end_date_to, "end_date_to")])
             resp = await sg.post_request("/entity/bookings/_search", json={"filters": filters, "fields": fields})
             return resp.get("data", [])
 
@@ -95,21 +95,20 @@ def register_booking_tools(mcp, sg: ShotGridRest):
         if percent_allocation is not None and not (0 <= percent_allocation <= 100):
             return {"error": "Invalid percent_allocation", "message": "percent_allocation must be between 0 and 100."}
 
-        data: Dict = {
-            "user": {"type": "HumanUser", "id": user_id},
-            "project": {"type": "Project", "id": project_id},
-            "start_date": _to_iso_date(start_date, "start_date"),
-            "end_date": _to_iso_date(end_date, "end_date"),
-            "vacation": vacation,
-        }
-        if note is not None:
-            data["note"] = note
-        if percent_allocation is not None:
-            data["percent_allocation"] = percent_allocation
-        if sg_status_list is not None:
-            data["sg_status_list"] = sg_status_list
-
         async def _call():
+            data: Dict = {
+                "user": {"type": "HumanUser", "id": user_id},
+                "project": {"type": "Project", "id": project_id},
+                "start_date": _to_iso_date(start_date, "start_date"),
+                "end_date": _to_iso_date(end_date, "end_date"),
+                "vacation": vacation,
+            }
+            if note is not None:
+                data["note"] = note
+            if percent_allocation is not None:
+                data["percent_allocation"] = percent_allocation
+            if sg_status_list is not None:
+                data["sg_status_list"] = sg_status_list
             resp = await sg.post_request("/entity/bookings", context_type="json", json=data)
             return resp.get("data", resp)
 
@@ -139,23 +138,22 @@ def register_booking_tools(mcp, sg: ShotGridRest):
         if percent_allocation is not None and not (0 <= percent_allocation <= 100):
             return {"error": "Invalid percent_allocation", "message": "percent_allocation must be between 0 and 100."}
 
-        data: Dict = {}
-        if start_date is not None:
-            data["start_date"] = _to_iso_date(start_date, "start_date")
-        if end_date is not None:
-            data["end_date"] = _to_iso_date(end_date, "end_date")
-        if vacation is not None:
-            data["vacation"] = vacation
-        if note is not None:
-            data["note"] = note
-        if percent_allocation is not None:
-            data["percent_allocation"] = percent_allocation
-        if sg_status_list is not None:
-            data["sg_status_list"] = sg_status_list
-        if not data:
-            return {"error": "No fields to update", "message": "Provide at least one field to update."}
-
         async def _call():
+            data: Dict = {}
+            if start_date is not None:
+                data["start_date"] = _to_iso_date(start_date, "start_date")
+            if end_date is not None:
+                data["end_date"] = _to_iso_date(end_date, "end_date")
+            if vacation is not None:
+                data["vacation"] = vacation
+            if note is not None:
+                data["note"] = note
+            if percent_allocation is not None:
+                data["percent_allocation"] = percent_allocation
+            if sg_status_list is not None:
+                data["sg_status_list"] = sg_status_list
+            if not data:
+                return {"error": "No fields to update", "message": "Provide at least one field to update."}
             resp = await sg.put_request(f"/entity/bookings/{booking_id}", json=data)
             return resp.get("data", resp)
 
