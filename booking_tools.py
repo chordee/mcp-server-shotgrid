@@ -11,14 +11,20 @@ logger = logging.getLogger(__name__)
 
 
 def _to_iso_date(parts: List[int], field_name: str) -> str:
-    if len(parts) != 3:
+    if not isinstance(parts, list) or len(parts) != 3:
         raise ValueError(f"{field_name} must be [YYYY, MM, DD].")
-    return date(parts[0], parts[1], parts[2]).isoformat()
+    try:
+        return date(int(parts[0]), int(parts[1]), int(parts[2])).isoformat()
+    except (TypeError, ValueError):
+        raise ValueError(f"{field_name} must be a valid [YYYY, MM, DD] date.")
 
 
 async def _handle_errors(coro):
     try:
         return await coro
+    except ValueError as e:
+        logger.info("Booking validation error: %s", e)
+        return {"error": "Invalid input", "message": str(e)}
     except httpx.HTTPStatusError as e:
         logger.warning("ShotGrid API error: status=%s", e.response.status_code)
         return {"error": f"ShotGrid API Error: {e.response.status_code}", "message": "Request to ShotGrid failed."}
