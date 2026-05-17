@@ -37,34 +37,81 @@ def register_booking_tools(mcp, sg: ShotGridRest):
 
     @mcp.tool()
     async def get_bookings(
-        user_id: Optional[int] = None,
-        project_id: Optional[int] = None,
-        start_date_from: Optional[List[int]] = None,
-        start_date_to: Optional[List[int]] = None,
-        end_date_from: Optional[List[int]] = None,
-        end_date_to: Optional[List[int]] = None,
+        user_ids: Optional[List[int]] = None,
+        project_ids: Optional[List[int]] = None,
+        range_from: Optional[List[int]] = None,
+        range_to: Optional[List[int]] = None,
         vacation: Optional[bool] = None,
+        exclude_vacation: bool = False,
+        sg_status_list: Optional[BOOKING_STATUS] = None,
+        sort_field: Literal["start_date", "end_date", "updated_at"] = "start_date",
+        sort_order: Literal["asc", "desc"] = "asc",
+        limit: Optional[int] = None,
+        page: Optional[int] = None,
     ) -> Union[List[Dict], Dict]:
-        """Retrieve bookings in ShotGrid with various filters."""
+        """Retrieve bookings whose date interval overlaps [range_from, range_to].
+
+        Args:
+            user_ids: Filter to bookings owned by any of these HumanUser IDs.
+            project_ids: Filter to bookings on any of these Project IDs.
+            range_from: Start of query range as [YYYY, MM, DD] (inclusive).
+            range_to: End of query range as [YYYY, MM, DD] (inclusive).
+                Overlap semantics: a booking [bs, be] is returned iff
+                bs <= range_to AND be >= range_from.
+            vacation: Exact match on the vacation flag (True or False).
+            exclude_vacation: Shortcut for vacation=False. Ignored when
+                `vacation` is also provided.
+            sg_status_list: Filter by status ("cfrm" or "pndng").
+            sort_field: Field to sort by (default "start_date").
+            sort_order: "asc" or "desc" (default "asc").
+            limit: Page size. Omit to fetch without pagination.
+            page: 1-based page number. Defaults to 1 when `limit` is given.
+        """
         fields = ["user", "updated_at", "project", "vacation", "sg_status_list", "percent_allocation", "start_date", "end_date", "note"]
+        SENTINEL_PAST = "1900-01-01"
+        SENTINEL_FUTURE = "9999-12-31"
 
         async def _call():
-            filters = []
+            filters: List = []
+
+            if user_ids:
+                filters.append(["user.HumanUser.id", "in", user_ids])
+            if project_ids:
+                filters.append(["project.Project.id", "in", project_ids])
+
             if vacation is not None:
                 filters.append(["vacation", "is", vacation])
-            if user_id is not None:
-                filters.append(["user.HumanUser.id", "is", user_id])
-            if project_id is not None:
-                filters.append(["project.Project.id", "is", project_id])
-            if start_date_from is not None:
-                filters.append(["start_date", "greater_than", _to_iso_date(start_date_from, "start_date_from")])
-            if start_date_to is not None:
-                filters.append(["start_date", "less_than", _to_iso_date(start_date_to, "start_date_to")])
-            if end_date_from is not None:
-                filters.append(["end_date", "greater_than", _to_iso_date(end_date_from, "end_date_from")])
-            if end_date_to is not None:
-                filters.append(["end_date", "less_than", _to_iso_date(end_date_to, "end_date_to")])
-            resp = await sg.post_request("/entity/bookings/_search", json={"filters": filters, "fields": fields})
+                if exclude_vacation:
+                    logger.warning("Both 'vacation' and 'exclude_vacation' given; 'vacation' takes precedence.")
+            elif exclude_vacation:
+                filters.append(["vacation", "is", False])
+
+            if sg_status_list is not None:
+                filters.append(["sg_status_list", "is", sg_status_list])
+
+            range_from_iso = _to_iso_date(range_from, "range_from") if range_from is not None else None
+            range_to_iso = _to_iso_date(range_to, "range_to") if range_to is not None else None
+
+            if range_from_iso and range_to_iso and range_from_iso > range_to_iso:
+                raise ValueError("range_from must be <= range_to.")
+
+            if range_to_iso is not None:
+                filters.append(["start_date", "between", [SENTINEL_PAST, range_to_iso]])
+            if range_from_iso is not None:
+                filters.append(["end_date", "between", [range_from_iso, SENTINEL_FUTURE]])
+
+            sort_str = sort_field if sort_order == "asc" else f"-{sort_field}"
+            payload: Dict = {
+                "filters": filters,
+                "fields": fields,
+                "sort": sort_str,
+            }
+            if limit is not None:
+                if limit <= 0:
+                    raise ValueError("limit must be positive.")
+                payload["page"] = {"size": limit, "number": page or 1}
+
+            resp = await sg.post_request("/entity/bookings/_search", json=payload)
             return resp.get("data", [])
 
         return await _handle_errors(_call())
