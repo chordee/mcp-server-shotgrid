@@ -74,9 +74,13 @@ def register_booking_tools(mcp, sg: ShotGridRest):
         async def _call():
             filters: List = []
 
-            if user_ids:
+            if user_ids is not None:
+                if not user_ids:
+                    raise ValueError("user_ids must be a non-empty list when provided.")
                 filters.append(["user.HumanUser.id", "in", user_ids])
-            if project_ids:
+            if project_ids is not None:
+                if not project_ids:
+                    raise ValueError("project_ids must be a non-empty list when provided.")
                 filters.append(["project.Project.id", "in", project_ids])
 
             if vacation is not None:
@@ -109,7 +113,11 @@ def register_booking_tools(mcp, sg: ShotGridRest):
             if limit is not None:
                 if limit <= 0:
                     raise ValueError("limit must be positive.")
-                payload["page"] = {"size": limit, "number": page or 1}
+                if page is not None and page <= 0:
+                    raise ValueError("page must be >= 1.")
+                payload["page"] = {"size": limit, "number": page if page is not None else 1}
+            elif page is not None:
+                raise ValueError("page requires limit.")
 
             resp = await sg.post_request("/entity/bookings/_search", json=payload)
             return resp.get("data", [])
