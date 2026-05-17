@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Any, Union
 
 from shotgrid_rest import ShotGridRest
 from shotgrid_options import GENERAL_FIELDS, EXCLUDE_KEYS, ALL_ENTITY_TYPES
+from booking_tools import register_booking_tools
 
 SG = ShotGridRest()
 
@@ -592,70 +593,6 @@ async def get_versions(
 
 
 @mcp.tool()
-async def get_bookings(
-    user_id: Optional[int] = None,
-    project_id: Optional[int] = None,
-    start_date_from: Optional[List[int]] = None,
-    start_date_to: Optional[List[int]] = None,
-    end_date_from: Optional[List[int]] = None,
-    end_date_to: Optional[List[int]] = None,
-    vacation: Optional[bool] = None,
-) -> Union[List[Dict], Dict]:
-    """Retrieve bookings in ShotGrid with various filters."""
-    filters = []
-    if vacation is not None:
-        filters.append(["vacation", "is", vacation])
-    if user_id is not None:
-        filters.append(["user.HumanUser.id", "is", user_id])
-    if project_id is not None:
-        filters.append(["project.Project.id", "is", project_id])
-    if start_date_from:
-        filters.append(
-            [
-                "start_date",
-                "greater_than",
-                f"{start_date_from[0]:04}-{start_date_from[1]:02}-{start_date_from[2]:02}",
-            ]
-        )
-    if start_date_to:
-        filters.append(
-            [
-                "start_date",
-                "less_than",
-                f"{start_date_to[0]:04}-{start_date_to[1]:02}-{start_date_to[2]:02}",
-            ]
-        )
-    if end_date_from:
-        filters.append(
-            [
-                "end_date",
-                "greater_than",
-                f"{end_date_from[0]:04}-{end_date_from[1]:02}-{end_date_from[2]:02}",
-            ]
-        )
-    if end_date_to:
-        filters.append(
-            [
-                "end_date",
-                "less_than",
-                f"{end_date_to[0]:04}-{end_date_to[1]:02}-{end_date_to[2]:02}",
-            ]
-        )
-    fields = [
-        "user", "updated_at", "project", "vacation",
-        "sg_status_list", "start_date", "end_date", "note"
-    ]
-    
-    async def _call():
-        resp = await SG.post_request(
-            "/entity/bookings/_search", json={"filters": filters, "fields": fields}
-        )
-        return resp.get("data", [])
-        
-    return await handle_request_errors(_call())
-
-
-@mcp.tool()
 async def get_entities_updated_in_last_n_days(
     entity_type: ALL_ENTITY_TYPES,
     n: int,
@@ -690,6 +627,8 @@ async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int) -> Uni
         
     return await handle_request_errors(_call())
 
+
+register_booking_tools(mcp, SG)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MCP Server for ShotGrid")

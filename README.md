@@ -9,7 +9,7 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 - Query projects, users, assets, tasks, notes, versions, bookings, and more.
 - Retrieve detailed information about entities.
 - Designed for integration with LLM-based workflows.
-- Modular codebase: `main.py` provides the MCP server and tool definitions, while `shotgrid_rest.py` implements the ShotGrid API wrapper.
+- Modular codebase: `main.py` provides the MCP server and core tool definitions; `booking_tools.py` handles all Booking CRUD operations; `shotgrid_rest.py` implements the ShotGrid API wrapper.
 
 ## Requirements
 
@@ -52,6 +52,9 @@ All tools are asynchronous and exposed via FastMCP. They return structured Pytho
 - `get_all_replies_with_note_id(note_id: int)`: List replies associated with a note.
 - `get_versions(project_id: int (optional), project_name: str (optional), task_id: int (optional), task_name: str (optional), user_id: int (optional), updated_in_last_n_days: int (optional), updated_date_from: [YYYY,MM,DD] (optional), updated_date_to: [YYYY,MM,DD] (optional))`: List versions with optional filters.
 - `get_bookings(user_id: int (optional), project_id: int (optional), start_date_from: [YYYY,MM,DD] (optional), start_date_to: [YYYY,MM,DD] (optional), end_date_from: [YYYY,MM,DD] (optional), end_date_to: [YYYY,MM,DD] (optional), vacation: bool (optional))`: List bookings, with optional filters.
+- `create_booking(user_id: int, project_id: int, start_date: [YYYY,MM,DD], end_date: [YYYY,MM,DD], vacation: bool (optional), note: str (optional), percent_allocation: float (optional), sg_status_list: "cfrm"|"pndng" (optional))`: Create a new booking.
+- `update_booking(booking_id: int, start_date: [YYYY,MM,DD] (optional), end_date: [YYYY,MM,DD] (optional), vacation: bool (optional), note: str (optional), percent_allocation: float (optional), sg_status_list: "cfrm"|"pndng" (optional))`: Update an existing booking. Note: `user` and `project` cannot be changed via update — delete and recreate the booking if these need to change.
+- `delete_booking(booking_id: int)`: Delete a booking by ID.
 - `get_entities_updated_in_last_n_days(entity_type: str, n: int, project_id: int (optional))`: List entities of a type updated in the last n days.
 - `get_entity_by_id(entity_type: str, entity_id: int)`: Get details for an entity by type and ID.
 
