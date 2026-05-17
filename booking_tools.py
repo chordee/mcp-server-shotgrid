@@ -53,13 +53,13 @@ def register_booking_tools(mcp, sg: ShotGridRest):
             filters.append(["user.HumanUser.id", "is", user_id])
         if project_id is not None:
             filters.append(["project.Project.id", "is", project_id])
-        if start_date_from:
+        if start_date_from is not None:
             filters.append(["start_date", "greater_than", _to_iso_date(start_date_from, "start_date_from")])
-        if start_date_to:
+        if start_date_to is not None:
             filters.append(["start_date", "less_than", _to_iso_date(start_date_to, "start_date_to")])
-        if end_date_from:
+        if end_date_from is not None:
             filters.append(["end_date", "greater_than", _to_iso_date(end_date_from, "end_date_from")])
-        if end_date_to:
+        if end_date_to is not None:
             filters.append(["end_date", "less_than", _to_iso_date(end_date_to, "end_date_to")])
         fields = ["user", "updated_at", "project", "vacation", "sg_status_list", "percent_allocation", "start_date", "end_date", "note"]
 
