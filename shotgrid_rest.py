@@ -69,20 +69,21 @@ class ShotGridRest:
     async def post_request(
         self,
         path: str,
-        context_type: Literal["array", "hash"] = "array",
+        context_type: Literal["array", "hash", "json"] = "array",
         json: Optional[Dict[str, Any]] = None,
     ):
         """
         Send an asynchronous POST request using the shared client.
+        context_type: "array" / "hash" for ShotGrid search endpoints; "json" for entity create.
         """
         url = f"{self.api_host}{path}"
-        headers = {
-            "Content-Type": (
-                ARRAY_HEADER["Content-Type"]
-                if context_type == "array"
-                else HASH_HEADER["Content-Type"]
-            )
-        }
+        if context_type == "array":
+            content_type = ARRAY_HEADER["Content-Type"]
+        elif context_type == "hash":
+            content_type = HASH_HEADER["Content-Type"]
+        else:
+            content_type = "application/json"
+        headers = {"Content-Type": content_type}
         client = self._get_client()
         resp = await client.post(url, json=json, headers=headers, auth=self.auth)
         resp.raise_for_status()
@@ -97,6 +98,23 @@ class ShotGridRest:
         resp = await client.get(url, params=params, auth=self.auth)
         resp.raise_for_status()
         return resp.json()
+
+    async def put_request(self, path: str, json: Optional[Dict[str, Any]] = None):
+        """Send an asynchronous PUT request using the shared client."""
+        url = f"{self.api_host}{path}"
+        headers = {"Content-Type": "application/json"}
+        client = self._get_client()
+        resp = await client.put(url, json=json, headers=headers, auth=self.auth)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def delete_request(self, path: str):
+        """Send an asynchronous DELETE request using the shared client."""
+        url = f"{self.api_host}{path}"
+        client = self._get_client()
+        resp = await client.delete(url, auth=self.auth)
+        resp.raise_for_status()
+        return resp.status_code
 
     async def fetch_entity_fields(self, entity_type: str) -> List[str]:
         """
