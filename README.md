@@ -88,7 +88,7 @@ Both short (`-host`, `-ci`, `-cs`) and long (`--host`, `--client-id`, `--client-
 
 ### Security note
 
-Prefer environment variables over CLI arguments. Arguments passed on the command line are visible in process listings (`ps`, Task Manager), shell history, and many supervisor/IDE configuration files. Environment variables set inside the MCP client config (such as Claude Code's `.mcp.json`) are not exposed to other users on the host.
+Prefer environment variables over CLI arguments. Arguments passed on the command line are visible in process listings (`ps`, Task Manager), shell history, and many supervisor/IDE configuration files. Environment variables can reduce accidental exposure, but they are still secrets — store them in protected config files (for example, `.mcp.json` / `~/.claude.json`), use strict file permissions, and never commit secrets to version control.
 
 The server uses FastMCP and communicates via `transport="stdio"` only. Tools exposed by MCP are available for LLM agents to call.
 
