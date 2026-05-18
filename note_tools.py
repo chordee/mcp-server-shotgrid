@@ -209,9 +209,18 @@ def register_note_tools(mcp, sg: ShotGridRest):
         """Update an existing Note. `project` and `user` cannot be changed via update;
         delete and recreate if those need to change.
 
-        Each `link_*` / `task_ids` / `addressing_*` list, when provided, REPLACES
-        the existing value (ShotGrid multi-entity PUT semantics). Pass an empty
-        list to clear a field. At least one editable field must be supplied.
+        Multi-entity list parameters REPLACE the existing value when provided
+        (ShotGrid multi-entity PUT semantics) — pass an empty list to clear.
+
+        Important: the four `link_*` parameters all map to the single
+        `note_links` field. Supplying any one of them rebuilds `note_links`
+        from scratch using only the supplied entity types, which clears any
+        other types already on the note. To preserve existing links of a type
+        you are not modifying, fetch the note first and pass that type's ids
+        back in. `task_ids` (which writes `tasks`) and the `addressing_*`
+        parameters are independent of `note_links` and of each other.
+
+        At least one editable field must be supplied.
         """
         async def _call():
             data: Dict = {}
