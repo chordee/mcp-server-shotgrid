@@ -7,6 +7,7 @@ from typing import List, Dict, Optional, Any, Union
 from shotgrid_rest import ShotGridRest
 from shotgrid_options import GENERAL_FIELDS, EXCLUDE_KEYS, ALL_ENTITY_TYPES
 from booking_tools import register_booking_tools
+from note_tools import register_note_tools
 
 SG = ShotGridRest()
 
@@ -417,112 +418,6 @@ async def get_users_name_or_login_contains(
 
 
 @mcp.tool()
-async def get_notes(
-    shot_id: Optional[int] = None,
-    asset_id: Optional[int] = None,
-    user_id: Optional[int] = None,
-    task_id: Optional[int] = None,
-    version_id: Optional[int] = None,
-    project_id: Optional[int] = None,
-    project_name: Optional[str] = None,
-    task_name: Optional[str] = None,
-    asset_code: Optional[str] = None,
-    version_name: Optional[str] = None,
-    updated_in_last_n_days: Optional[int] = None,
-    updated_date_from: Optional[List[int]] = None,
-    updated_date_to: Optional[List[int]] = None,
-) -> Union[List[Dict], Dict]:
-    """
-    Retrieve notes from ShotGrid with optional filters.
-
-    Args:
-        shot_id (int, optional): The ID of the shot to filter notes.
-        asset_id (int, optional): The ID of the asset to filter notes.
-        user_id (int, optional): The ID of the user to filter notes.
-        task_id (int, optional): The ID of the task to filter notes.
-        version_id (int, optional): The ID of the version to filter notes.
-        project_id (int, optional): The ID of the project to filter notes.
-        project_name (str, optional): Filter notes where the project name contains this value.
-        task_name (str, optional): Filter notes where the task content contains this value.
-        asset_code (str, optional): Filter notes where the linked asset code contains this value.
-        version_name (str, optional): Filter notes where the linked version code contains this value.
-        updated_in_last_n_days (int, optional): Only include notes updated in the last n days.
-        updated_date_from (List[int], optional): Only include notes updated after this date [YYYY, MM, DD].
-        updated_date_to (List[int], optional): Only include notes updated before this date [YYYY, MM, DD].
-
-    Returns:
-        List[dict]: A list of note dictionaries.
-    """
-    filters = []
-    if shot_id:
-        filters.append(["note_links", "is", {"type": "Shot", "id": shot_id}])
-    if asset_id:
-        filters.append(["note_links", "is", {"type": "Asset", "id": asset_id}])
-    if user_id:
-        filters.append(["addressings_to", "is", {"type": "HumanUser", "id": user_id}])
-    if task_id:
-        filters.append(["tasks", "is", {"type": "Task", "id": task_id}])
-    if version_id:
-        filters.append(["note_links", "is", {"type": "Version", "id": version_id}])
-    if project_id:
-        filters.append(["project.Project.id", "is", project_id])
-    if project_name:
-        filters.append(["project.Project.name", "contains", project_name])
-    if task_name:
-        filters.append(["tasks.Task.content", "contains", task_name])
-    if asset_code:
-        filters.append(["note_links.Asset.code", "contains", asset_code])
-    if version_name:
-        filters.append(["note_links.Version.code", "contains", version_name])
-    if updated_in_last_n_days is not None:
-        filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
-    if updated_date_from:
-        filters.append(
-            [
-                "updated_at",
-                "greater_than",
-                f"{updated_date_from[0]:04}-{updated_date_from[1]:02}-{updated_date_from[2]:02}",
-            ]
-        )
-    if updated_date_to:
-        filters.append(
-            [
-                "updated_at",
-                "less_than",
-                f"{updated_date_to[0]:04}-{updated_date_to[1]:02}-{updated_date_to[2]:02}",
-            ]
-        )
-    
-    fields = [
-        "user", "cached_display_name", "sg_status_list", "tasks",
-        "addressings_to", "note_links", "attachments"
-    ]
-    
-    async def _call():
-        resp = await SG.post_request(
-            "/entity/notes/_search", json={"filters": filters, "fields": fields}
-        )
-        return resp.get("data", [])
-        
-    return await handle_request_errors(_call())
-
-
-@mcp.tool()
-async def get_all_replies_with_note_id(note_id: int) -> Union[List[Dict], Dict]:
-    """Get all replies associated with a specific note ID."""
-    params = {"fields": "replies", "filter[id]": note_id}
-    
-    async def _call():
-        response = await SG.get_request("/entity/notes", params=params)
-        data = response.get("data", [])
-        if data:
-            return data[0].get("relationships", {}).get("replies", {}).get("data", [])
-        return []
-        
-    return await handle_request_errors(_call())
-
-
-@mcp.tool()
 async def get_versions(
     project_id: Optional[int] = None,
     project_name: Optional[str] = None,
@@ -630,6 +525,7 @@ async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int) -> Uni
 
 
 register_booking_tools(mcp, SG)
+register_note_tools(mcp, SG)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
