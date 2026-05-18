@@ -18,23 +18,79 @@ This project provides an MCP (Model Context Protocol) server, implemented using 
 - [httpx-auth](https://pypi.org/project/httpx-auth/)
 - [mcp.server.fastmcp](https://github.com/modelcontextprotocol/fastmcp)
 
-## Usage
+## Installation
 
-1. **Set up ShotGrid credentials**:
-   - Obtain your ShotGrid host URL, client ID, and client secret.
-
-2. **Run the server** (replace placeholders with your actual values):
+1. **Clone the repository:**
 
    ```bash
-   uv run --directory {REPO_DIR} main.py -host https://your-shotgrid-url -ci your_client_id -cs your_client_secret
+   git clone https://github.com/chordee/mcp-server-shotgrid.git
    ```
 
-   All three arguments are required. Both short (`-host`, `-ci`, `-cs`) and long (`--host`, `--client-id`, `--client-secret`) forms are supported.
+2. **Install [uv](https://docs.astral.sh/uv/)** if you don't have it. `uv` manages Python 3.11 and the dependencies declared in `pyproject.toml` automatically; no manual `venv` step is needed.
 
-   The server uses FastMCP and communicates via `transport="stdio"` only.
+3. **Configure credentials.** Use environment variables (recommended) or CLI arguments. See [Usage](#usage).
 
-3. **Integrate with your LLM agent**:
-   - The server exposes tools via MCP for LLMs to call.
+4. **Register the server with your MCP client.** Example for Claude Code (`~/.claude.json` or a project-local `.mcp.json`):
+
+   ```json
+   {
+     "mcpServers": {
+       "shotgrid": {
+         "command": "uv",
+         "args": ["run", "--directory", "D:\\path\\to\\mcp-server-shotgrid", "main.py"],
+         "env": {
+           "SHOTGRID_HOST": "https://your-shotgrid-url",
+           "SHOTGRID_CLIENT_ID": "your_client_id",
+           "SHOTGRID_CLIENT_SECRET": "your_client_secret"
+         }
+       }
+     }
+   }
+   ```
+
+## Usage
+
+Credentials can come from either **environment variables (recommended)** or CLI arguments. Environment variables take precedence; if both are missing for any of the three values, the server exits with an error.
+
+### Option A — Environment variables (recommended)
+
+| Variable | Description |
+|---|---|
+| `SHOTGRID_HOST` | ShotGrid host URL, e.g. `https://your-shotgrid-url` |
+| `SHOTGRID_CLIENT_ID` | OAuth2 client ID |
+| `SHOTGRID_CLIENT_SECRET` | OAuth2 client secret |
+
+**Windows (PowerShell):**
+
+```powershell
+$env:SHOTGRID_HOST = "https://your-shotgrid-url"
+$env:SHOTGRID_CLIENT_ID = "your_client_id"
+$env:SHOTGRID_CLIENT_SECRET = "your_client_secret"
+uv run --directory C:\path\to\mcp-server-shotgrid main.py
+```
+
+**macOS / Linux (bash / zsh):**
+
+```bash
+export SHOTGRID_HOST="https://your-shotgrid-url"
+export SHOTGRID_CLIENT_ID="your_client_id"
+export SHOTGRID_CLIENT_SECRET="your_client_secret"
+uv run --directory /path/to/mcp-server-shotgrid main.py
+```
+
+### Option B — CLI arguments
+
+```bash
+uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-id your_client_id --client-secret your_client_secret
+```
+
+Both short (`-host`, `-ci`, `-cs`) and long (`--host`, `--client-id`, `--client-secret`) forms are supported.
+
+### Security note
+
+Prefer environment variables over CLI arguments. Arguments passed on the command line are visible in process listings (`ps`, Task Manager), shell history, and many supervisor/IDE configuration files. Environment variables can reduce accidental exposure, but they are still secrets — store them in protected config files (for example, `.mcp.json` / `~/.claude.json`), use strict file permissions, and never commit secrets to version control.
+
+The server uses FastMCP and communicates via `transport="stdio"` only. Tools exposed by MCP are available for LLM agents to call.
 
 ## Available Tools
 
@@ -62,21 +118,12 @@ All tools are asynchronous and exposed via FastMCP. They return structured Pytho
 
 The server includes a robust error handling wrapper that captures ShotGrid API errors and internal exceptions, returning them as structured JSON objects with `error` and `message` fields.
 
-## Example
-
-```bash
-uv run --directory {REPO_DIR} main.py --host https://your-shotgrid-url --client-id your_client_id --client-secret your_client_secret
-```
-
 ## Notes
 
 - Ensure your ShotGrid account has API access enabled.
 - The server uses OAuth2 for authentication.
 - The server is implemented using FastMCP and runs with `transport="stdio"` only.
-- Command-line arguments:  
-  - `-host` or `--host` (ShotGrid host URL)  
-  - `-ci` or `--client-id` (OAuth2 client ID)  
-  - `-cs` or `--client-secret` (OAuth2 client secret)
+- Credentials can be provided via environment variables (`SHOTGRID_HOST`, `SHOTGRID_CLIENT_ID`, `SHOTGRID_CLIENT_SECRET`) or CLI arguments (`-host` / `--host`, `-ci` / `--client-id`, `-cs` / `--client-secret`). Env vars take precedence.
 - Some tools use dynamic field fetching and exclude certain keys (see `remove_exclude_fields` in `main.py`).
 - Extend or customize the tools in `main.py` as needed for your workflow.
 - The ShotGrid REST API logic is implemented in `shotgrid_rest.py`.
