@@ -1,5 +1,6 @@
 import logging
 import httpx
+from datetime import date
 from typing import List, Dict, Optional, Union
 
 from shotgrid_rest import ShotGridRest
@@ -29,7 +30,7 @@ def _to_iso_date(parts: List[int], field_name: str) -> str:
     if not isinstance(parts, list) or len(parts) != 3:
         raise ValueError(f"{field_name} must be [YYYY, MM, DD].")
     try:
-        return f"{int(parts[0]):04}-{int(parts[1]):02}-{int(parts[2]):02}"
+        return date(int(parts[0]), int(parts[1]), int(parts[2])).isoformat()
     except (TypeError, ValueError) as e:
         raise ValueError(f"{field_name} must be a valid [YYYY, MM, DD] date.") from e
 
@@ -72,6 +73,8 @@ def register_note_tools(mcp, sg: ShotGridRest):
         updated_in_last_n_days: Optional[int] = None,
         updated_date_from: Optional[List[int]] = None,
         updated_date_to: Optional[List[int]] = None,
+        limit: Optional[int] = None,
+        page: Optional[int] = None,
     ) -> Union[List[Dict], Dict]:
         """Retrieve notes from ShotGrid with optional filters.
 
@@ -86,9 +89,14 @@ def register_note_tools(mcp, sg: ShotGridRest):
             task_name: Substring match on related task content.
             asset_code: Substring match on the linked asset code.
             version_name: Substring match on the linked version code.
-            updated_in_last_n_days: Restrict to notes updated in the last N days.
+            updated_in_last_n_days: Restrict to notes updated in the last N
+                days. Must be a positive integer.
             updated_date_from: [YYYY, MM, DD] lower bound on updated_at (strict).
             updated_date_to: [YYYY, MM, DD] upper bound on updated_at (strict).
+            limit: Page size. Omit for ShotGrid's default page; supply to
+                paginate large projects whose note count exceeds the default.
+            page: 1-based page number. Defaults to 1 when `limit` is given;
+                must not be supplied without `limit`.
         """
         async def _call():
             filters: List = []
@@ -113,6 +121,8 @@ def register_note_tools(mcp, sg: ShotGridRest):
             if version_name:
                 filters.append(["note_links.Version.code", "contains", version_name])
             if updated_in_last_n_days is not None:
+                if updated_in_last_n_days <= 0:
+                    raise ValueError("updated_in_last_n_days must be a positive integer.")
                 filters.append(["updated_at", "in_last", [updated_in_last_n_days, "DAY"]])
             if updated_date_from is not None:
                 filters.append(["updated_at", "greater_than",
@@ -121,10 +131,17 @@ def register_note_tools(mcp, sg: ShotGridRest):
                 filters.append(["updated_at", "less_than",
                                 _to_iso_date(updated_date_to, "updated_date_to")])
 
-            resp = await sg.post_request(
-                "/entity/notes/_search",
-                json={"filters": filters, "fields": NOTE_FIELDS},
-            )
+            payload: Dict = {"filters": filters, "fields": NOTE_FIELDS}
+            if limit is not None:
+                if limit <= 0:
+                    raise ValueError("limit must be positive.")
+                if page is not None and page <= 0:
+                    raise ValueError("page must be >= 1.")
+                payload["page"] = {"size": limit, "number": page if page is not None else 1}
+            elif page is not None:
+                raise ValueError("page requires limit.")
+
+            resp = await sg.post_request("/entity/notes/_search", json=payload)
             return resp.get("data", [])
 
         return await _handle_errors(_call())
@@ -265,17 +282,36 @@ def register_note_tools(mcp, sg: ShotGridRest):
         return await _handle_errors(_call())
 
     @mcp.tool()
-    async def get_replies(note_id: int) -> Union[List[Dict], Dict]:
+    async def get_replies(
+        note_id: int,
+        limit: Optional[int] = None,
+        page: Optional[int] = None,
+    ) -> Union[List[Dict], Dict]:
         """List replies under a Note, returning full reply fields
-        (content, user, entity, timestamps, attachments)."""
+        (content, user, entity, timestamps, attachments).
+
+        Args:
+            note_id: Parent Note id (required).
+            limit: Page size. Omit for ShotGrid's default page; supply to
+                paginate notes whose reply count exceeds the default.
+            page: 1-based page number. Defaults to 1 when `limit` is given;
+                must not be supplied without `limit`.
+        """
         async def _call():
-            resp = await sg.post_request(
-                "/entity/replies/_search",
-                json={
-                    "filters": [["entity", "is", {"type": "Note", "id": note_id}]],
-                    "fields": REPLY_FIELDS,
-                },
-            )
+            payload: Dict = {
+                "filters": [["entity", "is", {"type": "Note", "id": note_id}]],
+                "fields": REPLY_FIELDS,
+            }
+            if limit is not None:
+                if limit <= 0:
+                    raise ValueError("limit must be positive.")
+                if page is not None and page <= 0:
+                    raise ValueError("page must be >= 1.")
+                payload["page"] = {"size": limit, "number": page if page is not None else 1}
+            elif page is not None:
+                raise ValueError("page requires limit.")
+
+            resp = await sg.post_request("/entity/replies/_search", json=payload)
             return resp.get("data", [])
 
         return await _handle_errors(_call())
