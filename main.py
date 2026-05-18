@@ -1,4 +1,5 @@
 import argparse
+import os
 import httpx
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict, Optional, Any, Union
@@ -631,12 +632,30 @@ async def get_entity_by_id(entity_type: ALL_ENTITY_TYPES, entity_id: int) -> Uni
 register_booking_tools(mcp, SG)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="MCP Server for ShotGrid")
-    parser.add_argument("-host", "--host", type=str, help="host address", required=True)
-    parser.add_argument("-ci", "--client-id", type=str, help="client-id", required=True)
-    parser.add_argument("-cs", "--client-secret", type=str, help="client-secret", required=True)
+    parser = argparse.ArgumentParser(
+        description=(
+            "MCP Server for ShotGrid. Credentials can be supplied via "
+            "environment variables (SHOTGRID_HOST, SHOTGRID_CLIENT_ID, "
+            "SHOTGRID_CLIENT_SECRET) or CLI arguments. Env vars take precedence."
+        )
+    )
+    parser.add_argument("-host", "--host", type=str, help="ShotGrid host URL (env: SHOTGRID_HOST)")
+    parser.add_argument("-ci", "--client-id", type=str, help="OAuth2 client ID (env: SHOTGRID_CLIENT_ID)")
+    parser.add_argument("-cs", "--client-secret", type=str, help="OAuth2 client secret (env: SHOTGRID_CLIENT_SECRET)")
     args = parser.parse_args()
-    
-    SG.set_host(args.host)
-    SG.access_token(client_id=args.client_id, client_secret=args.client_secret)
+
+    host = os.environ.get("SHOTGRID_HOST") or args.host
+    client_id = os.environ.get("SHOTGRID_CLIENT_ID") or args.client_id
+    client_secret = os.environ.get("SHOTGRID_CLIENT_SECRET") or args.client_secret
+
+    missing = [name for name, value in (
+        ("host (SHOTGRID_HOST or --host)", host),
+        ("client_id (SHOTGRID_CLIENT_ID or --client-id)", client_id),
+        ("client_secret (SHOTGRID_CLIENT_SECRET or --client-secret)", client_secret),
+    ) if not value]
+    if missing:
+        parser.error("Missing required credentials: " + ", ".join(missing))
+
+    SG.set_host(host)
+    SG.access_token(client_id=client_id, client_secret=client_secret)
     mcp.run(transport="stdio")
